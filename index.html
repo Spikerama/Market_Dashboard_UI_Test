@@ -7,6 +7,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet" />
+  <!-- SortableJS for drag/drop -->
+  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
   <style>
     :root {
       --bg: #1f212a;
@@ -22,14 +24,14 @@
       --border: rgba(255,255,255,0.08);
       --transition: .35s cubic-bezier(.4,.2,.2,1);
     }
-    * { box-sizing:border-box; }
+    * { box-sizing: border-box; }
     body {
-      margin:0;
-      padding:1.5rem 1rem 3rem;
+      margin: 0;
+      padding: 1.5rem 1rem 3rem;
       background: var(--bg);
       font-family: 'Inter', system-ui,-apple-system,BlinkMacSystemFont,sans-serif;
       color: var(--text-primary);
-      min-height:100vh;
+      min-height: 100vh;
     }
     .app {
       max-width: 1400px;
@@ -39,30 +41,30 @@
       gap: 1rem;
     }
     .header {
-      display:flex;
-      flex-wrap:wrap;
+      display: flex;
+      flex-wrap: wrap;
       justify-content: space-between;
       align-items: center;
       gap: .5rem;
       padding: .75rem 1rem;
     }
     .title {
-      font-size:1.5rem;
-      font-weight:700;
-      display:flex;
-      align-items:center;
-      gap:.5rem;
+      font-size: 1.5rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: .5rem;
     }
     .sub {
-      font-size:.85rem;
+      font-size: .85rem;
       color: var(--text-secondary);
-      margin-top:2px;
+      margin-top: 2px;
     }
     .grid {
-      display:grid;
+      display: grid;
       grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-      gap:1rem;
-      margin-top:.5rem;
+      gap: 1rem;
+      margin-top: .5rem;
     }
     .card {
       position: relative;
@@ -70,86 +72,92 @@
       border-radius: var(--radius);
       padding: 1.25rem 1rem 1.5rem;
       box-shadow: var(--shadow);
-      display:flex;
+      display: flex;
       flex-direction: column;
       transition: transform var(--transition), box-shadow var(--transition);
-      overflow:hidden;
-      border:1px solid var(--border);
+      overflow: hidden;
+      border: 1px solid var(--border);
     }
     .card:hover {
       transform: translateY(-2px);
       box-shadow: 0 35px 80px -10px rgba(0,0,0,0.7);
     }
     .small-label {
-      font-size:.55rem;
+      font-size: .55rem;
       text-transform: uppercase;
-      letter-spacing:1px;
+      letter-spacing: 1px;
       color: var(--text-secondary);
-      margin-bottom:4px;
+      margin-bottom: 4px;
     }
     h2 {
-      margin:0;
-      font-size:.95rem;
-      font-weight:600;
-      letter-spacing:.5px;
-      display:flex;
+      margin: 0;
+      font-size: .95rem;
+      font-weight: 600;
+      letter-spacing: .5px;
+      display: flex;
       justify-content: space-between;
       align-items: baseline;
+      cursor: grab;
     }
     .value {
-      font-size:2.2rem;
-      font-weight:700;
-      margin-top:6px;
-      display:flex;
+      font-size: 2.2rem;
+      font-weight: 700;
+      margin-top: 6px;
+      display: flex;
       align-items: baseline;
-      gap:6px;
+      gap: 6px;
       color: var(--text-primary);
     }
     .change {
-      font-size:.85rem;
-      margin-top:4px;
-      display:flex;
-      align-items:center;
-      gap:4px;
+      font-size: .85rem;
+      margin-top: 4px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
     }
     .up { color: var(--live); }
     .down { color: var(--error); }
     .badge {
-      font-size:.55rem;
-      padding:6px 12px;
-      border-radius:999px;
-      font-weight:600;
-      display:inline-block;
-      margin-left:6px;
+      font-size: .55rem;
+      padding: 6px 12px;
+      border-radius: 999px;
+      font-weight: 600;
+      display: inline-block;
+      margin-left: 6px;
       text-transform: uppercase;
-      letter-spacing:.5px;
+      letter-spacing: .5px;
     }
     .badge-live { background: var(--live); color: #000; }
     .badge-cached { background: var(--cached); color: #fff; }
     .badge-error { background: var(--error); color: #fff; }
-    .timestamp { font-size:.55rem; margin-top:6px; color: var(--text-secondary); }
-    .stale { font-size:.55rem; color: var(--text-secondary); margin-top:2px; }
+    .timestamp { font-size: .55rem; margin-top: 6px; color: var(--text-secondary); }
+    .stale { font-size: .55rem; color: var(--text-secondary); margin-top: 2px; }
     .spinner {
-      width:16px;
-      height:16px;
-      border:3px solid rgba(255,255,255,0.1);
-      border-top:3px solid #8b9cff;
-      border-radius:50%;
+      width: 16px;
+      height: 16px;
+      border: 3px solid rgba(255,255,255,0.1);
+      border-top: 3px solid #8b9cff;
+      border-radius: 50%;
       animation: spin 1s linear infinite;
-      display:inline-block;
+      display: inline-block;
       vertical-align: middle;
-      margin-left:4px;
+      margin-left: 4px;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
     .note {
-      font-size:.55rem;
+      font-size: .55rem;
       color: var(--text-secondary);
-      margin-top:6px;
+      margin-top: 6px;
     }
-    .mini { display:flex; gap:6px; flex-wrap:wrap; align-items:center; margin-top:4px; }
-    .header-right { display:flex; gap:1rem; flex-wrap:wrap; font-size:.9rem; }
-    .legend { display:flex; gap:.75rem; align-items:center; }
-    .legend .badge { margin:0; }
+    .mini { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin-top: 4px; }
+    .header-right { display: flex; gap: 1rem; flex-wrap: wrap; font-size: .9rem; }
+    .legend { display: flex; gap: .75rem; align-items: center; }
+    .legend .badge { margin: 0; }
+    .sortable-ghost {
+      opacity: 0.6;
+      transform: scale(1.02);
+      box-shadow: 0 35px 80px -10px rgba(255,255,255,0.1);
+    }
   </style>
 </head>
 <body>
@@ -169,9 +177,9 @@
       </div>
     </div>
 
-    <div class="grid">
+    <div class="grid" id="dashboard-grid">
       <!-- SPY -->
-      <div class="card">
+      <div class="card" data-widget="sp500" id="card-sp500">
         <div class="small-label">Equity</div>
         <h2>S&P 500 (SPY)</h2>
         <div class="value" id="sp500">
@@ -186,7 +194,7 @@
       </div>
 
       <!-- TSLA -->
-      <div class="card">
+      <div class="card" data-widget="tsla" id="card-tsla">
         <div class="small-label">Equity</div>
         <h2>Tesla (TSLA)</h2>
         <div class="value" id="tsla">
@@ -201,7 +209,7 @@
       </div>
 
       <!-- Lithium -->
-      <div class="card">
+      <div class="card" data-widget="lithium" id="card-lithium">
         <div class="small-label">Commodity Proxy</div>
         <h2>Lithium Spot Proxy (LIT ETF)</h2>
         <div class="value" id="lithium">
@@ -216,7 +224,7 @@
       </div>
 
       <!-- VIXY -->
-      <div class="card">
+      <div class="card" data-widget="vixy" id="card-vixy">
         <div class="small-label">Volatility</div>
         <h2>VIXY</h2>
         <div class="value" id="vix">
@@ -231,7 +239,7 @@
       </div>
 
       <!-- VIX index -->
-      <div class="card">
+      <div class="card" data-widget="vixindex" id="card-vix-index">
         <div class="small-label">Volatility</div>
         <h2>VIX Index (^VIX)</h2>
         <div class="value" id="vix-index">
@@ -246,7 +254,7 @@
       </div>
 
       <!-- Yield Curve -->
-      <div class="card">
+      <div class="card" data-widget="yield" id="card-yield">
         <div class="small-label">Macro</div>
         <h2>10Y − 2Y Yield Curve Spread</h2>
         <div class="value" id="yield">
@@ -261,7 +269,7 @@
       </div>
 
       <!-- Buffett -->
-      <div class="card">
+      <div class="card" data-widget="buffett" id="card-buffett">
         <div class="small-label">Valuation</div>
         <h2>Buffett Indicator</h2>
         <div class="value" id="buffett">
@@ -277,7 +285,7 @@
       </div>
 
       <!-- Estimated Buffett -->
-      <div class="card">
+      <div class="card" data-widget="estimated-buffett" id="card-estimated-buffett">
         <div class="small-label">Valuation</div>
         <h2>Estimated Buffett (S&P scaled)</h2>
         <div style="font-size:.6rem;margin-top:2px;">Approx: S&P 500 cap × 1.30 / GDP</div>
@@ -294,7 +302,7 @@
     </div>
 
     <div class="note">
-      Data sources: TwelveData for ETFs, Netlify functions for VIX index, yield spread, Buffett/estimated Buffett. <br>
+      Data sources: TwelveData for ETFs, Netlify functions for VIX index, yield spread, Buffett/estimated Buffett. <br />
       RULE: Working widgets are isolated. New features/refactors only after separate testing.
     </div>
   </div>
@@ -521,7 +529,7 @@
         document.getElementById('yield-stale').style.display = 'none';
         document.getElementById('yield-updated').textContent = 'Updated: ' + new Date().toLocaleTimeString();
         const statusEl = document.getElementById('yield-status');
-        if (statusEl) { statusEl.textContent='LIVE'; statusEl.className='badge badge-live'; }
+        if (statusEl){ statusEl.textContent='LIVE'; statusEl.className='badge badge-live'; }
       } catch (e) {
         console.error('Yield curve fetch failed:', e);
         const cached = cacheGet('yield');
@@ -543,7 +551,7 @@
           setCard('yield', null, null, false);
           document.getElementById('yield-updated').textContent = 'Updated: --';
           const statusEl = document.getElementById('yield-status');
-          if (statusEl) { statusEl.textContent='ERROR'; statusEl.className='badge badge-error'; }
+          if (statusEl){ statusEl.textContent='ERROR'; statusEl.className='badge badge-error'; }
         }
       } finally { if (spinner) spinner.style.display = 'none'; }
     }
@@ -598,11 +606,11 @@
           if (updatedEl) updatedEl.textContent = 'Updated: ' + ts + ' (cached)';
           if (statusEl) { statusEl.textContent='CACHED'; statusEl.className='badge badge-cached'; }
         } else {
-          if (valEl) valEl.textContent='Error';
-          if (changeEl) changeEl.textContent=''; 
+          if (valEl) valEl.textContent = 'Error';
+          if (changeEl) changeEl.textContent = '';
           if (statusEl){ statusEl.textContent='ERROR'; statusEl.className='badge badge-error'; }
-          if (staleEl) staleEl.style.display='none';
-          if (updatedEl) updatedEl.textContent='Updated: --';
+          if (staleEl) staleEl.style.display = 'none';
+          if (updatedEl) updatedEl.textContent = 'Updated: --';
         }
       } finally { if (spinner) spinner.style.display = 'none'; }
     }
@@ -652,17 +660,48 @@
           if (updatedEl) updatedEl.textContent = 'Updated: ' + ts + ' (cached)';
           if (statusEl) { statusEl.textContent='CACHED'; statusEl.className='badge badge-cached'; }
         } else {
-          if (valEl) valEl.textContent='Error';
-          if (changeEl) changeEl.textContent=''; 
+          if (valEl) valEl.textContent = 'Error';
+          if (changeEl) changeEl.textContent = '';
           if (statusEl){ statusEl.textContent='ERROR'; statusEl.className='badge badge-error'; }
-          if (staleEl) staleEl.style.display='none';
-          if (updatedEl) updatedEl.textContent='Updated: --'; 
+          if (staleEl) staleEl.style.display = 'none';
+          if (updatedEl) updatedEl.textContent = 'Updated: --';
         }
       } finally { if (spinner) spinner.style.display = 'none'; }
     }
 
     function updateGlobalTimestamp() {
       document.getElementById('global-updated').textContent = new Date().toLocaleTimeString();
+    }
+
+    // Drag & reorder persistence
+    function initDragReorder() {
+      const grid = document.getElementById('dashboard-grid');
+      if (!grid) return;
+
+      // Restore order from localStorage
+      const saved = localStorage.getItem('dashboard_order');
+      if (saved) {
+        try {
+          const order = JSON.parse(saved);
+          order.forEach(widgetId => {
+            const card = document.querySelector(`[data-widget="${widgetId}"]`);
+            if (card && grid.contains(card)) {
+              grid.appendChild(card);
+            }
+          });
+        } catch {}
+      }
+
+      Sortable.create(grid, {
+        animation: 150,
+        handle: 'h2',
+        ghostClass: 'sortable-ghost',
+        onEnd: () => {
+          const kids = Array.from(grid.children);
+          const order = kids.map(c => c.getAttribute('data-widget')).filter(Boolean);
+          localStorage.setItem('dashboard_order', JSON.stringify(order));
+        }
+      });
     }
 
     function boot() {
@@ -675,6 +714,7 @@
       refreshBuffett();
       refreshEstimatedBuffett();
       updateGlobalTimestamp();
+      initDragReorder();
       setInterval(() => {
         refreshSPY();
         refreshTSLA();
