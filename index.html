@@ -49,7 +49,7 @@
       border:1px solid var(--border);
     }
     .card.alert {box-shadow:0 0 25px 3px var(--error);}
-    .card:hover {transform:translateY(-2px);box-shadow:0 35px 80px -10px rgba(255,255,255,0.7);}
+    .card:hover {transform:translateY(-2px);box-shadow:0 20px 50px -10px rgba(255,255,255,0.2);}
     .small-label {font-size:.55rem;text-transform:uppercase;letter-spacing:1px;color:var(--text-secondary);margin-bottom:4px;}
     h2 {margin:0;font-size:.95rem;font-weight:600;letter-spacing:.5px;display:flex;justify-content:space-between;align-items:baseline;cursor:grab;}
     .value {font-size:2.2rem;font-weight:700;margin-top:6px;display:flex;align-items:baseline;gap:6px;color:var(--text-primary);position:relative;}
@@ -75,9 +75,16 @@
     .sparkline {width:100px;height:28px;}
     .temp-bar {width:100%;height:14px;border-radius:7px;background:linear-gradient(90deg,#28c17d 0%,#ffcd3c 60%,#ff6f6f 100%);position:relative;overflow:hidden;margin-top:4px;}
     .temp-marker {position:absolute;top:0;bottom:0;width:6px;border-radius:3px;transform:translateX(-50%);box-shadow:0 0 12px rgba(255,255,255,0.4);}
-    .temp-needle {position:absolute;top:0;bottom:0;width:2px;background:#fff;box-shadow:0 0 8px rgba(255,255,255,0.8);transform:translateX(-50%);pointer-events:none;}
+    .temp-needle {position:absolute;top:0;bottom:0;width:2px;background:#fff;box-shadow:0 0 8px rgba(255,255,255,0.8);transform:translateX(-50%);pointer-events:none;z-index:2;}
     .temp-label {margin-top:4px;font-size:.75rem;}
     .sortable-ghost {opacity:.6;transform:scale(1.02);box-shadow:0 35px 80px -10px rgba(255,255,255,0.1);}
+    /* hide threshold bars on Buffett widgets as requested */
+    #card-buffett .threshold-bar,
+    #card-buffett .threshold-inner,
+    #card-estimated-buffett .threshold-bar,
+    #card-estimated-buffett .threshold-inner {
+      display:none;
+    }
   </style>
 </head>
 <body>
@@ -149,9 +156,7 @@
         <div class="small-label">Valuation</div>
         <h2>Buffett Indicator</h2>
         <div class="value" id="buffett-wrapper" style="position:relative;">
-          <div class="threshold-bar" aria-hidden="true"></div>
-          <div class="threshold-inner" id="buffett-threshold" style="width:0;background:#28c17d;"></div>
-          <div style="position:relative;display:flex;align-items:center;gap:6px;width:100%;">
+          <div style="display:flex;align-items:center;gap:6px;width:100%;">
             <div id="buffett">-- <span id="buffett-spinner" class="spinner" style="display:none;"></span></div>
             <div class="threshold-label" id="buffett-label">--</div>
           </div>
@@ -171,9 +176,7 @@
         <h2>Estimated Buffett (S&P scaled)</h2>
         <div style="font-size:.6rem;margin-top:2px;">Approx: S&P 500 cap × 1.30 / GDP</div>
         <div class="value" id="estimated-buffett-wrapper" style="position:relative;">
-          <div class="threshold-bar" aria-hidden="true"></div>
-          <div class="threshold-inner" id="estimated-buffett-threshold" style="width:0;background:#28c17d;"></div>
-          <div style="position:relative;display:flex;align-items:center;gap:6px;width:100%;">
+          <div style="display:flex;align-items:center;gap:6px;width:100%;">
             <div id="estimated-buffett">-- <span id="estimated-buffett-spinner" class="spinner" style="display:none;"></span></div>
             <div class="threshold-label" id="estimated-buffett-label">--</div>
           </div>
@@ -254,12 +257,8 @@
   <script>
     const TWELVE_KEY = '26137bba624c4dcb9b5284ad1b234071';
 
-    function cacheSet(key, obj) {
-      try { localStorage.setItem(key, JSON.stringify({ ts: Date.now(), data: obj })); } catch {}
-    }
-    function cacheGet(key) {
-      try { return JSON.parse(localStorage.getItem(key)); } catch { return null; }
-    }
+    function cacheSet(key, obj) { try { localStorage.setItem(key, JSON.stringify({ ts: Date.now(), data: obj })); } catch {} }
+    function cacheGet(key) { try { return JSON.parse(localStorage.getItem(key)); } catch { return null; } }
 
     async function fetchWithRetry(url, attempts = 3, baseDelay = 300) {
       for (let i = 0; i < attempts; i++) {
@@ -362,8 +361,7 @@
     }
 
     async function refreshSPY() {
-      const spinner = document.getElementById('sp500-spinner');
-      if (spinner) spinner.style.display='inline-block';
+      const spinner = document.getElementById('sp500-spinner'); if (spinner) spinner.style.display='inline-block';
       try {
         const q = await getTwelveQuote('SPY');
         const price = parseFloat(q.close);
@@ -388,7 +386,7 @@
           drawSparkline('sp500-spark', getHistory('sp500'));
         } else {
           setCard('sp500', null, null, false);
-          document.getElementById('sp500-updated').textContent='Updated: --';
+          document.getElementById('sp500-updated').textContent = 'Updated: --';
           const statusEl = document.getElementById('sp500-status');
           if(statusEl){ statusEl.textContent='ERROR'; statusEl.className='badge badge-error'; }
         }
@@ -396,8 +394,7 @@
     }
 
     async function refreshYieldCurve() {
-      const spinner = document.getElementById('yield-spinner');
-      if (spinner) spinner.style.display='inline-block';
+      const spinner = document.getElementById('yield-spinner'); if (spinner) spinner.style.display='inline-block';
       try {
         const res = await fetch('/.netlify/functions/yieldSpread');
         const json = await res.json();
@@ -448,8 +445,7 @@
     }
 
     async function refreshEstimatedBuffett() {
-      const spinner = document.getElementById('estimated-buffett-spinner');
-      if (spinner) spinner.style.display='inline-block';
+      const spinner = document.getElementById('estimated-buffett-spinner'); if (spinner) spinner.style.display='inline-block';
       try {
         const res = await fetch('/.netlify/functions/estimatedBuffett');
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -466,15 +462,15 @@
         const inner = document.getElementById('estimated-buffett-threshold');
         const label = document.getElementById('estimated-buffett-label');
         const width = Math.min((ratio / 5) * 100, 100);
-        inner.style.width = `${width}%`;
+        if (inner) inner.style.width = `${width}%`;
         if (ratio < 2.5) {
-          inner.style.background = '#28c17d';
+          if (inner) inner.style.background = '#28c17d';
           label.textContent='Normal';
         } else if (ratio < 3.0) {
-          inner.style.background='#ffcd3c';
+          if (inner) inner.style.background='#ffcd3c';
           label.textContent='Caution';
         } else {
-          inner.style.background='#ff6f6f';
+          if (inner) inner.style.background='#ff6f6f';
           label.textContent='Overvalued';
         }
         document.getElementById('estimated-buffett-stale').style.display='none';
@@ -499,15 +495,15 @@
           const inner = document.getElementById('estimated-buffett-threshold');
           const label = document.getElementById('estimated-buffett-label');
           const width = Math.min((ratio / 5) * 100, 100);
-          inner.style.width = `${width}%`;
+          if (inner) inner.style.width = `${width}%`;
           if (ratio < 2.5) {
-            inner.style.background = '#28c17d';
+            if (inner) inner.style.background = '#28c17d';
             label.textContent='Normal';
           } else if (ratio < 3.0) {
-            inner.style.background='#ffcd3c';
+            if (inner) inner.style.background='#ffcd3c';
             label.textContent='Caution';
           } else {
-            inner.style.background='#ff6f6f';
+            if (inner) inner.style.background='#ff6f6f';
             label.textContent='Overvalued';
           }
           document.getElementById('estimated-buffett-stale').style.display='block';
@@ -527,8 +523,7 @@
     }
 
     async function refreshTSLA() {
-      const spinner = document.getElementById('tsla-spinner');
-      if (spinner) spinner.style.display='inline-block';
+      const spinner = document.getElementById('tsla-spinner'); if (spinner) spinner.style.display='inline-block';
       try {
         const q = await getTwelveQuote('TSLA');
         const price = parseFloat(q.close);
@@ -545,7 +540,7 @@
         const cached=cacheGet('tsla');
         if(cached?.data){
           setCard('tsla', cached.data.price, cached.data.pct,true);
-          const ts=cached.ts?new Date(cached.ts).toLocaleTimeString():'--';
+          const ts=cached.ts?new Date(ccached.ts).toLocaleTimeString():'--';
           document.getElementById('tsla-updated').textContent='Updated: '+ts+' (cached)';
           const statusEl=document.getElementById('tsla-status');
           if(statusEl){ statusEl.textContent='CACHED'; statusEl.className='badge badge-cached'; }
@@ -561,23 +556,23 @@
     }
 
     async function refreshLithium() {
-      const spinner=document.getElementById('lithium-spinner');
-      if(spinner) spinner.style.display='inline-block';
-      try {
-        const q = await getTwelveQuote('LIT');
-        const price = parseFloat(q.close);
-        const pct = parseFloat(q.percent_change);
-        setCard('lithium', price, pct, false);
+      const spinner=document.getElementById('lithium-spinner'); if(spinner) spinner.style.display='inline-block';
+      try{
+        const q=await getTwelveQuote('LIT');
+        const price=parseFloat(q.close);
+        const pct=parseFloat(q.percent_change);
+        setCard('lithium', price, pct,false);
         cacheSet('lithium',{ price,pct });
         document.getElementById('lithium-updated').textContent='Updated: '+new Date().toLocaleTimeString();
         const statusEl=document.getElementById('lithium-status');
         if(statusEl){ statusEl.textContent='LIVE'; statusEl.className='badge badge-live'; }
-      } catch(e){
+      }
+      catch(e){
         console.error('Lithium error', e);
         const cached=cacheGet('lithium');
         if(cached?.data){
           setCard('lithium', cached.data.price, cached.data.pct,true);
-          const ts=cached.ts?new Date(cached.ts).toLocaleTimeString():'--';
+          const ts=cached.ts?new Date(ccached.ts).toLocaleTimeString():'--';
           document.getElementById('lithium-updated').textContent='Updated: '+ts+' (cached)';
           const statusEl=document.getElementById('lithium-status');
           if(statusEl){ statusEl.textContent='CACHED'; statusEl.className='badge badge-cached'; }
@@ -591,23 +586,23 @@
     }
 
     async function refreshVIX() {
-      const spinner=document.getElementById('vix-spinner');
-      if(spinner) spinner.style.display='inline-block';
-      try {
-        const q = await getTwelveQuote('VIXY');
-        const price = parseFloat(q.close);
-        const pct = parseFloat(q.percent_change);
-        setCard('vix', price, pct, false);
+      const spinner=document.getElementById('vix-spinner'); if(spinner) spinner.style.display='inline-block';
+      try{
+        const q=await getTwelveQuote('VIXY');
+        const price=parseFloat(q.close);
+        const pct=parseFloat(q.percent_change);
+        setCard('vix', price, pct,false);
         cacheSet('vix',{ price,pct });
         document.getElementById('vix-updated').textContent='Updated: '+new Date().toLocaleTimeString();
         const statusEl=document.getElementById('vix-status');
         if(statusEl){ statusEl.textContent='LIVE'; statusEl.className='badge badge-live'; }
-      } catch(e){
+      }
+      catch(e){
         console.error('VIXY error', e);
         const cached=cacheGet('vix');
         if(cached?.data){
           setCard('vix', cached.data.price, cached.data.pct,true);
-          const ts=cached.ts? new Date(cached.ts).toLocaleTimeString():'--';
+          const ts=cached.ts? new Date(ccached.ts).toLocaleTimeString():'--';
           document.getElementById('vix-updated').textContent='Updated: '+ts+' (cached)';
           const statusEl=document.getElementById('vix-status');
           if(statusEl){ statusEl.textContent='CACHED'; statusEl.className='badge badge-cached'; }
@@ -621,25 +616,25 @@
     }
 
     async function refreshVIXIndex() {
-      const spinner=document.getElementById('vix-index-spinner');
-      if (spinner) spinner.style.display='inline-block';
-      try {
-        const res = await fetch('/.netlify/functions/vixIndex');
-        const json = await res.json();
+      const spinner=document.getElementById('vix-index-spinner'); if (spinner) spinner.style.display='inline-block';
+      try{
+        const res=await fetch('/.netlify/functions/vixIndex');
+        const json=await res.json();
         if(json.error) throw new Error(json.error);
-        const price = parseFloat(json.price);
-        const change = json.changePercent != null ? parseFloat(json.changePercent) : null;
-        setCard('vix-index', price, change, false);
+        const price=parseFloat(json.price);
+        const change=json.changePercent!=null?parseFloat(json.changePercent):null;
+        setCard('vix-index', price, change,false);
         cacheSet('vix-index',{ price, change });
         document.getElementById('vix-index-updated').textContent='Updated: '+new Date().toLocaleTimeString();
         const statusEl=document.getElementById('vix-index-status');
         if(statusEl){ statusEl.textContent='LIVE'; statusEl.className='badge badge-live'; }
-      } catch(e){
+      }
+      catch(e){
         console.error('VIX index error', e);
         const cached=cacheGet('vix-index');
         if(cached?.data){
           setCard('vix-index', cached.data.price, cached.data.change,true);
-          const ts=cached.ts? new Date(cached.ts).toLocaleTimeString():'--';
+          const ts=cached.ts? new Date(ccached.ts).toLocaleTimeString():'--';
           document.getElementById('vix-index-updated').textContent='Updated: '+ts+' (cached)';
           const statusEl=document.getElementById('vix-index-status');
           if(statusEl){ statusEl.textContent='CACHED'; statusEl.className='badge badge-cached'; }
@@ -707,8 +702,7 @@
 
       const card = document.getElementById('card-risk-temp');
       if (card) {
-        if (score >= 70) card.classList.add('alert');
-        else card.classList.remove('alert');
+        if (score >= 70) card.classList.add('alert'); else card.classList.remove('alert');
       }
     }
 
