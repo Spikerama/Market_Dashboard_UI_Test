@@ -527,7 +527,8 @@
     }
 
     async function refreshTSLA() {
-      const spinner = document.getElementById('tsla-spinner'); if (spinner) spinner.style.display='inline-block';
+      const spinner = document.getElementById('tsla-spinner');
+      if (spinner) spinner.style.display='inline-block';
       try {
         const q = await getTwelveQuote('TSLA');
         const price = parseFloat(q.close);
@@ -638,7 +639,7 @@
         const cached=cacheGet('vix-index');
         if(cached?.data){
           setCard('vix-index', cached.data.price, cached.data.change,true);
-          const ts=cached.ts? new Date(ccached.ts).toLocaleTimeString():'--';
+          const ts=cached.ts? new Date(cached.ts).toLocaleTimeString():'--';
           document.getElementById('vix-index-updated').textContent='Updated: '+ts+' (cached)';
           const statusEl=document.getElementById('vix-index-status');
           if(statusEl){ statusEl.textContent='CACHED'; statusEl.className='badge badge-cached'; }
