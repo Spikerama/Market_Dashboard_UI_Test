@@ -75,6 +75,7 @@
     </div>
 
     <div class="grid" id="dashboard-grid">
+      <!-- Risk Temperature Widget -->
       <div class="card" data-widget="risk-temp" id="card-risk-temp">
         <div class="small-label">Aggregate</div>
         <h2>Risk Temperature</h2>
@@ -92,6 +93,7 @@
         <div class="timestamp" id="risk-temp-updated">Updated: --</div>
       </div>
 
+      <!-- SPY Widget -->
       <div class="card" data-widget="sp500" id="card-sp500">
         <div class="small-label">Equity</div>
         <h2>S&P 500 (SPY)</h2>
@@ -107,6 +109,7 @@
         <div class="timestamp" id="sp500-updated">Updated: --</div>
       </div>
 
+      <!-- Yield Curve Widget -->
       <div class="card" data-widget="yield" id="card-yield">
         <div class="small-label">Macro</div>
         <h2>10Y − 2Y Yield Curve Spread</h2>
@@ -122,6 +125,7 @@
         <div class="timestamp" id="yield-updated">Updated: --</div>
       </div>
 
+      <!-- Buffett Indicator Widget -->
       <div class="card" data-widget="buffett" id="card-buffett">
         <div class="small-label">Valuation</div>
         <h2>Buffett Indicator</h2>
@@ -141,6 +145,7 @@
         <div class="note">Market cap / GDP. High readings signal overvaluation.</div>
       </div>
 
+      <!-- Estimated Buffett Widget -->
       <div class="card" data-widget="estimated-buffett" id="card-estimated-buffett">
         <div class="small-label">Valuation</div>
         <h2>Estimated Buffett (S&P scaled)</h2>
@@ -160,6 +165,7 @@
         <div class="timestamp" id="estimated-buffett-updated">Updated: --</div>
       </div>
 
+      <!-- Tesla Widget -->
       <div class="card" data-widget="tsla" id="card-tsla">
         <div class="small-label">Equity</div>
         <h2>Tesla (TSLA)</h2>
@@ -175,6 +181,7 @@
         <div class="timestamp" id="tsla-updated">Updated: --</div>
       </div>
 
+      <!-- Lithium Widget -->
       <div class="card" data-widget="lithium" id="card-lithium">
         <div class="small-label">Commodity Proxy</div>
         <h2>Lithium Spot Proxy (LIT ETF)</h2>
@@ -189,6 +196,7 @@
         <div class="timestamp" id="lithium-updated">Updated: --</div>
       </div>
 
+      <!-- VIXY Widget -->
       <div class="card" data-widget="vixy" id="card-vixy">
         <div class="small-label">Volatility</div>
         <h2>VIXY</h2>
@@ -198,11 +206,12 @@
         <div class="mini">
           <div class="change" id="vix-change"></div>
           <div id="vix-status" class="badge">--</div>
-        </div>
+        '</div>
         <div class="stale" id="vix-stale" style="display:none;">Using cached value</div>
         <div class="timestamp" id="vix-updated">Updated: --</div>
       </div>
 
+      <!-- VIX Index Widget -->
       <div class="card" data-widget="vixindex" id="card-vix-index">
         <div class="small-label">Volatility</div>
         <h2>VIX Index (^VIX)</h2>
@@ -234,7 +243,7 @@
       for (let i = 0; i < attempts; i++) {
         try {
           const res = await fetch(url);
-          if (!res.ok) throw new Error(`HTTP ${res.status}`);  // <-- Fix #1 applied
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);  // <-- Fix #1
           return await res.json();
         } catch (e) {
           if (i === attempts - 1) throw e;
@@ -244,7 +253,7 @@
     }
 
     async function getTwelveQuote(symbol) {
-      const url = `https://api.twelvedata.com/quote?symbol=${encodeURIComponent(symbol)}&apikey=${TWELVE_KEY}`;  // <-- Fix #2 applied
+      const url = `https://api.twelvedata.com/quote?symbol=${encodeURIComponent(symbol)}&apikey=${TWELVE_KEY}`;  // <-- Fix #2
       const json = await fetchWithRetry(url);
       if (!json || json.status === 'error' || typeof json.close === 'undefined') throw new Error(`Bad data for ${symbol}`);
       return json;
@@ -276,17 +285,18 @@
         setCard('sp500', price, pct, false);
         cacheSet('sp500', { price, pct });
         document.getElementById('sp500-updated').textContent = 'Updated: ' + new Date().toLocaleTimeString();
-        setStatus(document.getElementById('sp500-status'), 'LIVE');
-        pushHistory('sp500', price); drawSparkline('sp500-spark', getHistory('sp500'));
+        setStatus(document.getElementById('sp500-status'),'LIVE');
+        pushHistory('sp500', price);
+        drawSparkline('sp500-spark', getHistory('sp500'));
       } catch (e) {
         console.error('SPY error', e);
         const cached = cacheGet('sp500');
         if (cached?.data) {
           setCard('sp500', cached.data.price, cached.data.pct, true);
-          const ts = cached.ts ? new Date(cached.ts).toLocaleTimeString() : '--';
-          document.getElementById('sp500-updated').textContent = 'Updated: ' + ts + ' (cached)';
-          setStatus(document.getElementById('sp500-status'), 'CACHED');
-          pushHistory('sp500', cached.data.price); drawSparkline('sp500-spark', getHistory('sp500'));
+          document.getElementById('sp500-updated').textContent = 'Updated: '+new Date(cached.ts).toLocaleTimeString()+' (cached)';
+          setStatus(document.getElementById('sp500-status'),'CACHED');
+          pushHistory('sp500', cached.data.price);
+          drawSparkline('sp500-spark', getHistory('sp500'));
         } else {
           setErrorState('sp500');
         }
@@ -296,27 +306,28 @@
     async function refreshYieldCurve() {
       const spinner = document.getElementById('yield-spinner'); if (spinner) spinner.style.display='inline-block';
       try {
-        const res = await fetch(`/.netlify/functions/yieldSpread?bust=${Date.now()}`);  // <-- Fix #3 applied
+        const res = await fetch(`/.netlify/functions/yieldSpread?bust=${Date.now()}`);  // <-- Fix #3
         const json = await res.json();
         if (json.error) throw new Error(json.error);
         const spread = json.spread, inverted = json.inverted;
         setCard('yield', spread, null, false);
-        document.getElementById('yield-change').textContent = `${spread >= 0 ? '▲' : '▼'} ${inverted ? 'Inverted' : 'Normal'}`;
-        setStatus(document.getElementById('yield-status'), inverted ? 'INVERTED' : 'NORMAL');
-        cacheSet('yield', { spread, inverted });
+        document.getElementById('yield-change').textContent = `${spread>=0?'▲':'▼'} ${inverted?'Inverted':'Normal'}`;
+        setStatus(document.getElementById('yield-status'), inverted?'INVERTED':'NORMAL');
+        cacheSet('yield',{ spread, inverted });
         document.getElementById('yield-updated').textContent = 'Updated: ' + new Date().toLocaleTimeString();
         document.getElementById('yield-stale').style.display = 'none';
+        pushHistory('yield', spread);
         drawSparkline('yield-spark', getHistory('yield'));
       } catch (e) {
         console.error('Yield curve fetch failed:', e);
         const cached = cacheGet('yield');
         if (cached?.data) {
-          const spread = cached.data.spread, inverted = cached.data.inverted;
-          setCard('yield', spread, null, true);
-          document.getElementById('yield-change').textContent = `${spread >= 0 ? '▲' : '▼'} ${inverted ? 'Inverted' : 'Normal'}`;
-          setStatus(document.getElementById('yield-status'), inverted ? 'INVERTED' : 'NORMAL');
-          document.getElementById('yield-updated').textContent = 'Updated: ' + new Date(cached.ts).toLocaleTimeString() + ' (cached)';
-          document.getElementById('yield-stale').style.display = 'block';
+          setCard('yield', cached.data.spread, null, true);
+          document.getElementById('yield-change').textContent = `${cached.data.spread>=0?'▲':'▼'} ${cached.data.inverted?'Inverted':'Normal'}`;
+          setStatus(document.getElementById('yield-status'), cached.data.inverted?'INVERTED':'NORMAL');
+          document.getElementById('yield-updated').textContent='Updated: '+new Date(cached.ts).toLocaleTimeString()+' (cached)';
+          document.getElementById('yield-stale').style.display='block';
+          pushHistory('yield', cached.data.spread);
           drawSparkline('yield-spark', getHistory('yield'));
         } else {
           setErrorState('yield');
@@ -324,8 +335,9 @@
       }
     }
 
-    // ... include all other refresh functions (refreshEstimatedBuffett, refreshTSLA, refreshLithium, refreshVIX, refreshVIXIndex), setCard, pushHistory, getHistory, drawSparkline, interpolateColor, riskColor, refreshRiskTemperature, initDragReorder, updateGlobalTimestamp, boot, and the line: document.addEventListener('DOMContentLoaded', boot); EXACTLY as before, unchanged ...
-
+    // ... rest of refresh functions (refreshEstimatedBuffett, refreshTSLA, refreshLithium, refreshVIX, refreshVIXIndex) unchanged ...
+    // ... plus setCard, pushHistory, getHistory, drawSparkline, interpolateColor, riskColor, refreshRiskTemperature, initDragReorder, updateGlobalTimestamp, boot, and:
+    document.addEventListener('DOMContentLoaded', boot);
   </script>
 </body>
 </html>
