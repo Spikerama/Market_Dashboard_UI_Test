@@ -222,7 +222,7 @@
     </div>
 
     <div class="grid" id="dashboard-grid">
-      <!-- Risk Temperature (aggregator) -->
+      <!-- Risk Temperature -->
       <div class="card" data-widget="risk-temp" id="card-risk-temp">
         <div class="small-label">Aggregate</div>
         <h2>Risk Temperature</h2>
@@ -271,7 +271,7 @@
         <div class="timestamp" id="yield-updated">Updated: --</div>
       </div>
 
-      <!-- Buffett -->
+      <!-- Buffett (placeholder) -->
       <div class="card" data-widget="buffett" id="card-buffett">
         <div class="small-label">Valuation</div>
         <h2>Buffett Indicator</h2>
@@ -290,7 +290,7 @@
         </div>
         <div class="stale" id="buffett-stale" style="display:none;">Using cached value</div>
         <div class="timestamp" id="buffett-updated">Updated: --</div>
-        <div class="note">Market cap / GDP. High readings signal overvaluation.</div>
+        <div class="note">Placeholder; broken for now. Keeping for later.</div>
       </div>
 
       <!-- Estimated Buffett -->
@@ -315,7 +315,7 @@
         <div class="timestamp" id="estimated-buffett-updated">Updated: --</div>
       </div>
 
-      <!-- TSLA -->
+      <!-- Tesla -->
       <div class="card" data-widget="tsla" id="card-tsla">
         <div class="small-label">Equity</div>
         <h2>Tesla (TSLA)</h2>
@@ -378,7 +378,7 @@
     </div>
 
     <div class="note">
-      Data sources: TwelveData for ETFs, Netlify functions for VIX index, yield spread, Buffett/estimated Buffett. Aggregated “Risk Temperature” is a composite of key stress signals.  
+      Data sources: TwelveData for ETFs, Netlify functions for VIX index, yield spread, Estimated Buffett. Aggregated “Risk Temperature” mixes structural and near-term market stress.  
       Rule: working widgets are isolated; new features only after verified.
     </div>
   </div>
@@ -430,7 +430,7 @@
       if (staleEl) staleEl.style.display = useCache ? 'block' : 'none';
     }
 
-    // Sparklines
+    // Sparklines storage
     function pushHistory(key, value) {
       try {
         const raw = localStorage.getItem(`spark_${key}`);
@@ -560,93 +560,6 @@
       } finally { if (spinner) spinner.style.display = 'none'; }
     }
 
-    async function refreshBuffett() {
-      const spinner = document.getElementById('buffett-spinner');
-      if (spinner) spinner.style.display = 'inline-block';
-      try {
-        const res = await fetch('/.netlify/functions/buffett');
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const contentType = res.headers.get('Content-Type') || '';
-        if (!contentType.includes('application/json')) {
-          const text = await res.text();
-          throw new Error(`Expected JSON but got: ${text.slice(0,200)}`);
-        }
-        const json = await res.json();
-        if (json.error) throw new Error(json.error);
-        const ratio = json.ratio;
-        const overvalued = json.overvalued;
-        if (document.getElementById('buffett')) document.getElementById('buffett').textContent = `${ratio.toFixed(2)}%`;
-        const changeEl = document.getElementById('buffett-change');
-        if (changeEl) {
-          changeEl.textContent = overvalued ? '▲ Overvalued' : '▼ Normal';
-          changeEl.className = 'change ' + (overvalued ? 'up' : 'down');
-        }
-        const inner = document.getElementById('buffett-threshold');
-        const label = document.getElementById('buffett-label');
-        const width = Math.min((ratio / 150) * 100, 100);
-        inner.style.width = `${width}%`;
-        if (ratio < 80) {
-          inner.style.background = '#28c17d';
-          label.textContent = 'Normal';
-        } else if (ratio < 120) {
-          inner.style.background = '#ffcd3c';
-          label.textContent = 'Caution';
-        } else {
-          inner.style.background = '#ff6f6f';
-          label.textContent = 'Overvalued';
-        }
-        document.getElementById('buffett-stale').style.display = 'none';
-        document.getElementById('buffett-updated').textContent = 'Updated: ' + new Date().toLocaleTimeString();
-        const statusEl = document.getElementById('buffett-status');
-        if (statusEl){
-          statusEl.textContent = overvalued ? 'ALERT' : 'OK';
-          statusEl.className = overvalued ? 'badge badge-error' : 'badge';
-        }
-        cacheSet('buffett', { ratio, overvalued });
-        pushHistory('buffett', ratio);
-        drawSparkline('buffett-spark', getHistory('buffett'));
-      } catch (e) {
-        console.error('Buffett error', e);
-        const cached = cacheGet('buffett');
-        if (cached?.data) {
-          const ratio = cached.data.ratio;
-          const overvalued = cached.data.overvalued;
-          if (document.getElementById('buffett')) document.getElementById('buffett').textContent = `${ratio.toFixed(2)}%`;
-          const changeEl = document.getElementById('buffett-change');
-          if (changeEl) {
-            changeEl.textContent = overvalued ? '▲ Overvalued' : '▼ Normal';
-            changeEl.className = 'change ' + (overvalued ? 'up' : 'down');
-          }
-          const inner = document.getElementById('buffett-threshold');
-          const label = document.getElementById('buffett-label');
-          const width = Math.min((ratio / 150) * 100, 100);
-          inner.style.width = `${width}%`;
-          if (ratio < 80) {
-            inner.style.background = '#28c17d'; label.textContent='Normal';
-          } else if (ratio < 120) {
-            inner.style.background = '#ffcd3c'; label.textContent='Caution';
-          } else {
-            inner.style.background = '#ff6f6f'; label.textContent='Overvalued';
-          }
-          document.getElementById('buffett-stale').style.display = 'block';
-          document.getElementById('buffett-updated').textContent = 'Updated: ' + new Date(cached.ts).toLocaleTimeString() + ' (cached)';
-          const statusEl = document.getElementById('buffett-status');
-          if (statusEl){
-            statusEl.textContent = overvalued ? 'ALERT' : 'OK';
-            statusEl.className = overvalued ? 'badge badge-error' : 'badge';
-          }
-          pushHistory('buffett', ratio);
-          drawSparkline('buffett-spark', getHistory('buffett'));
-        } else {
-          if (document.getElementById('buffett')) document.getElementById('buffett').textContent = 'Error';
-          const changeEl = document.getElementById('buffett-change');
-          if (changeEl) changeEl.textContent = '';
-          const statusEl = document.getElementById('buffett-status');
-          if (statusEl){ statusEl.textContent='ERROR'; statusEl.className='badge badge-error'; }
-        }
-      }
-    }
-
     async function refreshEstimatedBuffett() {
       const spinner = document.getElementById('estimated-buffett-spinner');
       if (spinner) spinner.style.display = 'inline-block';
@@ -656,24 +569,30 @@
         const json = await res.json();
         if (json.error) throw new Error(json.error);
         const ratio = json.ratio;
-        const overvalued = json.overvalued;
+        const overvalued = ratio >= 3.0;
         if (document.getElementById('estimated-buffett')) document.getElementById('estimated-buffett').textContent = `${ratio.toFixed(2)}%`;
+
         const changeEl = document.getElementById('estimated-buffett-change');
-        if (changeEl){
-          changeEl.textContent = overvalued ? '▲ Overvalued' : '▼ Normal';
-          changeEl.className = 'change ' + (overvalued ? 'up' : 'down');
+        if (changeEl) {
+          changeEl.textContent = overvalued ? '▲ Overvalued' : (ratio >= 2.5 ? '▲ Caution' : '▼ Normal');
+          changeEl.className = 'change ' + (overvalued ? 'up' : (ratio >= 2.5 ? 'up' : 'down'));
         }
+
         const inner = document.getElementById('estimated-buffett-threshold');
         const label = document.getElementById('estimated-buffett-label');
-        const width = Math.min((ratio / 150) * 100, 100);
+        const width = Math.min((ratio / 5) * 100, 100);
         inner.style.width = `${width}%`;
-        if (ratio < 80) {
-          inner.style.background = '#28c17d'; label.textContent='Normal';
-        } else if (ratio < 120) {
-          inner.style.background = '#ffcd3c'; label.textContent='Caution';
+        if (ratio < 2.5) {
+          inner.style.background = '#28c17d';
+          label.textContent = 'Normal';
+        } else if (ratio < 3.0) {
+          inner.style.background = '#ffcd3c';
+          label.textContent = 'Caution';
         } else {
-          inner.style.background = '#ff6f6f'; label.textContent='Overvalued';
+          inner.style.background = '#ff6f6f';
+          label.textContent = 'Overvalued';
         }
+
         document.getElementById('estimated-buffett-stale').style.display = 'none';
         document.getElementById('estimated-buffett-updated').textContent = 'Updated: ' + new Date().toLocaleTimeString();
         const statusEl = document.getElementById('estimated-buffett-status');
@@ -689,20 +608,20 @@
         const cached = cacheGet('estimated-buffett');
         if (cached?.data) {
           const ratio = cached.data.ratio;
-          const overvalued = cached.data.overvalued;
+          const overvalued = ratio >= 3.0;
           if (document.getElementById('estimated-buffett')) document.getElementById('estimated-buffett').textContent = `${ratio.toFixed(2)}%`;
           const changeEl = document.getElementById('estimated-buffett-change');
-          if (changeEl){
-            changeEl.textContent = overvalued ? '▲ Overvalued' : '▼ Normal';
-            changeEl.className = 'change ' + (overvalued ? 'up' : 'down');
+          if (changeEl) {
+            changeEl.textContent = overvalued ? '▲ Overvalued' : (ratio >= 2.5 ? '▲ Caution' : '▼ Normal');
+            changeEl.className = 'change ' + (overvalued ? 'up' : (ratio >= 2.5 ? 'up' : 'down'));
           }
           const inner = document.getElementById('estimated-buffett-threshold');
           const label = document.getElementById('estimated-buffett-label');
-          const width = Math.min((ratio / 150) * 100, 100);
+          const width = Math.min((ratio / 5) * 100, 100);
           inner.style.width = `${width}%`;
-          if (ratio < 80) {
+          if (ratio < 2.5) {
             inner.style.background = '#28c17d'; label.textContent='Normal';
-          } else if (ratio < 120) {
+          } else if (ratio < 3.0) {
             inner.style.background = '#ffcd3c'; label.textContent='Caution';
           } else {
             inner.style.background = '#ff6f6f'; label.textContent='Overvalued';
@@ -855,31 +774,45 @@
 
     function refreshRiskTemperature() {
       const now = new Date();
-      const buff = cacheGet('buffett')?.data;
       const est = cacheGet('estimated-buffett')?.data;
       const yieldc = cacheGet('yield')?.data;
+      const spy = cacheGet('sp500')?.data;
+      const vixy = cacheGet('vix')?.data;
+      const tsla = cacheGet('tsla')?.data;
+
       let score = 0;
       const contributors = [];
-      if (yieldc && yieldc.spread < 0) { score += 30; contributors.push('Yield inverted'); }
-      if (buff && buff.ratio > 120) { score += 35; contributors.push('Buffett >120%'); }
-      if (est && est.ratio > 120) { score += 35; contributors.push('Est. Buffett >120%'); }
+
+      if (yieldc && yieldc.spread < 0) { score += 25; contributors.push('Yield inverted'); }
+      if (est && est.ratio >= 3.0) { score += 30; contributors.push(`Est. Buffett ≥ ${est.ratio.toFixed(2)}`); }
+      if (spy && typeof spy.pct === 'number' && spy.pct <= -1) { score += 10; contributors.push(`SPY down ${spy.pct.toFixed(2)}%`); }
+      if (vixy && typeof vixy.pct === 'number' && vixy.pct >= 5) { score += 10; contributors.push(`VIXY up ${vixy.pct.toFixed(2)}%`); }
+      if (tsla && typeof tsla.pct === 'number' && tsla.pct <= -1.5) { score += 10; contributors.push(`TSLA down ${tsla.pct.toFixed(2)}%`); }
+
       score = Math.min(100, score);
+
       const fillEl = document.getElementById('risk-temp-fill');
       const labelEl = document.getElementById('risk-temp-status');
       const scoreEl = document.getElementById('risk-temp-score');
       const detailsEl = document.getElementById('risk-temp-details');
       const updatedEl = document.getElementById('risk-temp-updated');
+
       if (fillEl) fillEl.style.width = `${score}%`;
       if (scoreEl) scoreEl.textContent = `${score}%`;
+
       let statusText = 'Normal';
       if (score >= 70) statusText = 'High Risk';
       else if (score >= 40) statusText = 'Elevated';
+
       if (labelEl) {
         labelEl.textContent = statusText;
         labelEl.className = score >= 70 ? 'badge badge-error' : (score >= 40 ? 'badge' : 'badge-live');
       }
-      if (detailsEl) detailsEl.textContent = contributors.length ? contributors.join(', ') : 'No major stress signals';
+      if (detailsEl) {
+        detailsEl.textContent = contributors.length ? contributors.join(', ') : 'No major stress signals';
+      }
       if (updatedEl) updatedEl.textContent = 'Updated: ' + now.toLocaleTimeString();
+
       const card = document.getElementById('card-risk-temp');
       if (card) {
         if (score >= 70) card.classList.add('alert');
@@ -895,7 +828,7 @@
         try {
           const order = JSON.parse(saved);
           order.forEach(widgetId => {
-            const card = document.querySelector(`[data-widget="${widgetId}"]`);
+            const card = document.querySelector(`[data-widget=\"${widgetId}\"]`);
             if (card && grid.contains(card)) grid.appendChild(card);
           });
         } catch {}
@@ -919,7 +852,6 @@
     async function boot() {
       refreshSPY();
       refreshYieldCurve();
-      refreshBuffett();
       refreshEstimatedBuffett();
       refreshTSLA();
       refreshLithium();
@@ -931,7 +863,6 @@
       setInterval(() => {
         refreshSPY();
         refreshYieldCurve();
-        refreshBuffett();
         refreshEstimatedBuffett();
         refreshTSLA();
         refreshLithium();
