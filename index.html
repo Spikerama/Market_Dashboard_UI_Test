@@ -75,7 +75,7 @@
     </div>
 
     <div class="grid" id="dashboard-grid">
-      <!-- Risk Temperature Widget -->
+      <!-- Risk Temperature -->
       <div class="card" data-widget="risk-temp" id="card-risk-temp">
         <div class="small-label">Aggregate</div>
         <h2>Risk Temperature</h2>
@@ -93,7 +93,7 @@
         <div class="timestamp" id="risk-temp-updated">Updated: --</div>
       </div>
 
-      <!-- SPY Widget -->
+      <!-- SPY -->
       <div class="card" data-widget="sp500" id="card-sp500">
         <div class="small-label">Equity</div>
         <h2>S&P 500 (SPY)</h2>
@@ -109,7 +109,7 @@
         <div class="timestamp" id="sp500-updated">Updated: --</div>
       </div>
 
-      <!-- Yield Curve Widget -->
+      <!-- Yield Curve -->
       <div class="card" data-widget="yield" id="card-yield">
         <div class="small-label">Macro</div>
         <h2>10Y − 2Y Yield Curve Spread</h2>
@@ -125,219 +125,6 @@
         <div class="timestamp" id="yield-updated">Updated: --</div>
       </div>
 
-      <!-- Buffett Indicator Widget -->
-      <div class="card" data-widget="buffett" id="card-buffett">
-        <div class="small-label">Valuation</div>
-        <h2>Buffett Indicator</h2>
-        <div class="value" id="buffett-wrapper" style="position:relative;">
-          <div style="display:flex;align-items:center;gap:6px;width:100%;">
-            <div id="buffett">-- <span id="buffett-spinner" class="spinner" style="display:none;"></span></div>
-            <div class="threshold-label" id="buffett-label">--</div>
-          </div>
-        </div>
-        <div class="mini">
-          <div class="change" id="buffett-change"></div>
-          <div id="buffett-status" class="badge">--</div>
-          <div class="sparkline" id="buffett-spark"></div>
-        </div>
-        <div class="stale" id="buffett-stale" style="display:none;">Using cached value</div>
-        <div class="timestamp" id="buffett-updated">Updated: --</div>
-        <div class="note">Market cap / GDP. High readings signal overvaluation.</div>
-      </div>
+      <!-- Buffett Indicator -->
 
-      <!-- Estimated Buffett Widget -->
-      <div class="card" data-widget="estimated-buffett" id="card-estimated-buffett">
-        <div class="small-label">Valuation</div>
-        <h2>Estimated Buffett (S&P scaled)</h2>
-        <div style="font-size:.6rem;margin-top:2px;">Approx: S&P 500 cap × 1.30 / GDP</div>
-        <div class="value" id="estimated-buffett-wrapper" style="position:relative;">
-          <div style="display:flex;align-items:center;gap:6px;width:100%;">
-            <div id="estimated-buffett">-- <span id="estimated-buffett-spinner" class="spinner" style="display:none;"></span></div>
-            <div class="threshold-label" id="estimated-buffett-label">--</div>
-          </div>
-        </div>
-        <div class="mini">
-          <div class="change" id="estimated-buffett-change"></div>
-          <div id="estimated-buffett-status" class="badge">--</div>
-          <div class="sparkline" id="estimated-buffett-spark"></div>
-        </div>
-        <div class="stale" id="estimated-buffett-stale" style="display:none;">Using cached value</div>
-        <div class="timestamp" id="estimated-buffett-updated">Updated: --</div>
-      </div>
-
-      <!-- Tesla Widget -->
-      <div class="card" data-widget="tsla" id="card-tsla">
-        <div class="small-label">Equity</div>
-        <h2>Tesla (TSLA)</h2>
-        <div class="value" id="tsla">
-          -- <span id="tsla-spinner" class="spinner" style="display:none;"></span>
-        </div>
-        <div class="mini">
-          <div class="change" id="tsla-change"></div>
-          <div id="tsla-status" class="badge">--</div>
-          <div class="sparkline" id="tsla-spark"></div>
-        </div>
-        <div class="stale" id="tsla-stale" style="display:none;">Using cached value</div>
-        <div class="timestamp" id="tsla-updated">Updated: --</div>
-      </div>
-
-      <!-- Lithium Widget -->
-      <div class="card" data-widget="lithium" id="card-lithium">
-        <div class="small-label">Commodity Proxy</div>
-        <h2>Lithium Spot Proxy (LIT ETF)</h2>
-        <div class="value" id="lithium">
-          -- <span id="lithium-spinner" class="spinner" style="display:none;"></span>
-        </div>
-        <div class="mini">
-          <div class="change" id="lithium-change"></div>
-          <div id="lithium-status" class="badge">--</div>
-        </div>
-        <div class="stale" id="lithium-stale" style="display:none;">Using cached value</div>
-        <div class="timestamp" id="lithium-updated">Updated: --</div>
-      </div>
-
-      <!-- VIXY Widget -->
-      <div class="card" data-widget="vixy" id="card-vixy">
-        <div class="small-label">Volatility</div>
-        <h2>VIXY</h2>
-        <div class="value" id="vix">
-          -- <span id="vix-spinner" class="spinner" style="display:none;"></span>
-        </div>
-        <div class="mini">
-          <div class="change" id="vix-change"></div>
-          <div id="vix-status" class="badge">--</div>
-        '</div>
-        <div class="stale" id="vix-stale" style="display:none;">Using cached value</div>
-        <div class="timestamp" id="vix-updated">Updated: --</div>
-      </div>
-
-      <!-- VIX Index Widget -->
-      <div class="card" data-widget="vixindex" id="card-vix-index">
-        <div class="small-label">Volatility</div>
-        <h2>VIX Index (^VIX)</h2>
-        <div class="value" id="vix-index">
-          -- <span id="vix-index-spinner" class="spinner" style="display:none;"></span>
-        </div>
-        <div class="mini">
-          <div class="change" id="vix-index-change"></div>
-          <div id="vix-index-status" class="badge">--</div>
-        </div>
-        <div class="stale" id="vix-index-stale" style="display:none;">Using cached value</div>
-        <div class="timestamp" id="vix-index-updated">Updated: --</div>
-      </div>
-    </div>
-
-    <div class="note">
-      Data sources: TwelveData for ETFs, Netlify functions for VIX index, yield spread, Estimated Buffett. Aggregated “Risk Temperature” mixes structural and near-term market stress.  
-      Rule: working widgets are isolated; new features only after verified.
-    </div>
-  </div>
-
-  <script>
-    const TWELVE_KEY = '26137bba624c4dcb9b5284ad1b234071';
-
-    function cacheSet(key, obj) { try { localStorage.setItem(key, JSON.stringify({ ts: Date.now(), data: obj })); } catch {} }
-    function cacheGet(key) { try { return JSON.parse(localStorage.getItem(key)); } catch { return null; } }
-
-    async function fetchWithRetry(url, attempts = 3, baseDelay = 300) {
-      for (let i = 0; i < attempts; i++) {
-        try {
-          const res = await fetch(url);
-          if (!res.ok) throw new Error(`HTTP ${res.status}`);  // <-- Fix #1
-          return await res.json();
-        } catch (e) {
-          if (i === attempts - 1) throw e;
-          await new Promise(r => setTimeout(r, baseDelay * (i + 1)));
-        }
-      }
-    }
-
-    async function getTwelveQuote(symbol) {
-      const url = `https://api.twelvedata.com/quote?symbol=${encodeURIComponent(symbol)}&apikey=${TWELVE_KEY}`;  // <-- Fix #2
-      const json = await fetchWithRetry(url);
-      if (!json || json.status === 'error' || typeof json.close === 'undefined') throw new Error(`Bad data for ${symbol}`);
-      return json;
-    }
-
-    function setStatus(el, type) {
-      if (!el) return;
-      el.classList.remove('badge-live', 'badge-cached', 'badge-error');
-      el.classList.add('badge');
-      if (type === 'LIVE') {
-        el.textContent = 'LIVE';
-        el.classList.add('badge-live');
-      } else if (type === 'CACHED') {
-        el.textContent = 'CACHED';
-        el.classList.add('badge-cached');
-      } else if (type === 'ERROR') {
-        el.textContent = 'ERROR';
-        el.classList.add('badge-error');
-      } else {
-        el.textContent = type;
-      }
-    }
-
-    async function refreshSPY() {
-      const spinner = document.getElementById('sp500-spinner'); if (spinner) spinner.style.display='inline-block';
-      try {
-        const q = await getTwelveQuote('SPY');
-        const price = parseFloat(q.close), pct = parseFloat(q.percent_change);
-        setCard('sp500', price, pct, false);
-        cacheSet('sp500', { price, pct });
-        document.getElementById('sp500-updated').textContent = 'Updated: ' + new Date().toLocaleTimeString();
-        setStatus(document.getElementById('sp500-status'),'LIVE');
-        pushHistory('sp500', price);
-        drawSparkline('sp500-spark', getHistory('sp500'));
-      } catch (e) {
-        console.error('SPY error', e);
-        const cached = cacheGet('sp500');
-        if (cached?.data) {
-          setCard('sp500', cached.data.price, cached.data.pct, true);
-          document.getElementById('sp500-updated').textContent = 'Updated: '+new Date(cached.ts).toLocaleTimeString()+' (cached)';
-          setStatus(document.getElementById('sp500-status'),'CACHED');
-          pushHistory('sp500', cached.data.price);
-          drawSparkline('sp500-spark', getHistory('sp500'));
-        } else {
-          setErrorState('sp500');
-        }
-      }
-    }
-
-    async function refreshYieldCurve() {
-      const spinner = document.getElementById('yield-spinner'); if (spinner) spinner.style.display='inline-block';
-      try {
-        const res = await fetch(`/.netlify/functions/yieldSpread?bust=${Date.now()}`);  // <-- Fix #3
-        const json = await res.json();
-        if (json.error) throw new Error(json.error);
-        const spread = json.spread, inverted = json.inverted;
-        setCard('yield', spread, null, false);
-        document.getElementById('yield-change').textContent = `${spread>=0?'▲':'▼'} ${inverted?'Inverted':'Normal'}`;
-        setStatus(document.getElementById('yield-status'), inverted?'INVERTED':'NORMAL');
-        cacheSet('yield',{ spread, inverted });
-        document.getElementById('yield-updated').textContent = 'Updated: ' + new Date().toLocaleTimeString();
-        document.getElementById('yield-stale').style.display = 'none';
-        pushHistory('yield', spread);
-        drawSparkline('yield-spark', getHistory('yield'));
-      } catch (e) {
-        console.error('Yield curve fetch failed:', e);
-        const cached = cacheGet('yield');
-        if (cached?.data) {
-          setCard('yield', cached.data.spread, null, true);
-          document.getElementById('yield-change').textContent = `${cached.data.spread>=0?'▲':'▼'} ${cached.data.inverted?'Inverted':'Normal'}`;
-          setStatus(document.getElementById('yield-status'), cached.data.inverted?'INVERTED':'NORMAL');
-          document.getElementById('yield-updated').textContent='Updated: '+new Date(cached.ts).toLocaleTimeString()+' (cached)';
-          document.getElementById('yield-stale').style.display='block';
-          pushHistory('yield', cached.data.spread);
-          drawSparkline('yield-spark', getHistory('yield'));
-        } else {
-          setErrorState('yield');
-        }
-      }
-    }
-
-    // ... rest of refresh functions (refreshEstimatedBuffett, refreshTSLA, refreshLithium, refreshVIX, refreshVIXIndex) unchanged ...
-    // ... plus setCard, pushHistory, getHistory, drawSparkline, interpolateColor, riskColor, refreshRiskTemperature, initDragReorder, updateGlobalTimestamp, boot, and:
-    document.addEventListener('DOMContentLoaded', boot);
-  </script>
-</body>
-</html>
+::contentReference[oaicite:0]{index=0}
