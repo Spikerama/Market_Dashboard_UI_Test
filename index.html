@@ -296,7 +296,7 @@
         else { setCard('sp500', null, null, false); document.getElementById('sp500-updated').textContent='Updated: --'; const statusEl = document.getElementById('sp500-status'); if(statusEl){ statusEl.textContent='ERROR'; statusEl.className='badge badge-error'; }}
     }
 
-    async function refreshYieldCurve() { /* existing logic unchanged */
+    async function refreshYieldCurve() {
       const spinner = document.getElementById('yield-spinner'); if (spinner) spinner.style.display='inline-block';
       try {
         const res = await fetch('/.netlify/functions/yieldSpread');
@@ -338,7 +338,7 @@
       }
     }
 
-    async function refreshEstimatedBuffett() { /* unchanged from previous implementation */
+    async function refreshEstimatedBuffett() {
       const spinner = document.getElementById('estimated-buffett-spinner'); if (spinner) spinner.style.display='inline-block';
       try {
         const res = await fetch('/.netlify/functions/estimatedBuffett'); if (!res.ok) throw new Error(`HTTP ${res.status}`); const json = await res.json(); if (json.error) throw new Error(json.error);
@@ -363,37 +363,123 @@
           if (changeEl) { changeEl.textContent = overvalued ? '▲ Overvalued' : (ratio >= 2.5 ? '▲ Caution' : '▼ Normal'); changeEl.className = 'change ' + (overvalued ? 'up' : (ratio >= 2.5 ? 'up' : 'down')); }
           const inner = document.getElementById('estimated-buffett-threshold'); const label = document.getElementById('estimated-buffett-label');
           const width = Math.min((ratio / 5) * 100, 100); inner.style.width = `${width}%`; if (ratio < 2.5) { inner.style.background = '#28c17d'; label.textContent='Normal'; }
-          else if (ratio < 3.0) { inner.style.background='#ffcd3c'; label.textContent='Caution'; }
+          else if (ratio < 3.0) { inner.style.background='#ffcd3c'; }
           else { inner.style.background='#ff6f6f'; label.textContent='Overvalued'; }
           document.getElementById('estimated-buffett-stale').style.display='block'; document.getElementById('estimated-buffett-updated').textContent='Updated: '+new Date(cached.ts).toLocaleTimeString()+' (cached)'; const statusEl=document.getElementById('estimated-buffett-status'); if (statusEl){ statusEl.textContent = overvalued ? 'ALERT' : 'OK'; statusEl.className = overvalued ? 'badge badge-error' : 'badge'; }
           pushHistory('estimated-buffett', ratio); drawSparkline('estimated-buffett-spark', getHistory('estimated-buffett'));
-        } else { if (document.getElementById('estimated-buffett')) document.getElementById('estimated-buffett').textContent='Error'; const changeEl=document.getElementById('estimated-buffett-change'); if (changeEl) changeEl.textContent=''; const statusEl=document.getElementById('estimated-buffett-status'); if (statusEl){ statusEl.textContent='ERROR'; statusEl.className='badge badge-error'; }
+        } else {
+          if (document.getElementById('estimated-buffett')) document.getElementById('estimated-buffett').textContent='Error';
+          const changeEl=document.getElementById('estimated-buffett-change'); if (changeEl) changeEl.textContent='';
+          const statusEl=document.getElementById('estimated-buffett-status'); if (statusEl){ statusEl.textContent='ERROR'; statusEl.className='badge badge-error'; }
         }
       }
     }
 
-    async function refreshTSLA() { /* unchanged */
+    async function refreshTSLA() {
       const spinner = document.getElementById('tsla-spinner'); if (spinner) spinner.style.display='inline-block';
-      try { const q = await getTwelveQuote('TSLA'); const price = parseFloat(q.close); const pct = parseFloat(q.percent_change); setCard('tsla', price, pct, false); cacheSet('tsla',{ price,pct }); document.getElementById('tsla-updated').textContent='Updated: '+new Date().toLocaleTimeString(); const statusEl=document.getElementById('tsla-status'); if(statusEl){ statusEl.textContent='LIVE'; statusEl.className='badge badge-live'; } pushHistory('tsla', price); drawSparkline('tsla-spark', getHistory('tsla')); }
-      catch(e){ console.error('TSLA error', e); const cached=cacheGet('tsla'); if(cached?.data){ setCard('tsla', cached.data.price, cached.data.pct,true); const ts=cached.ts?new Date(cached.ts).toLocaleTimeString():'--'; document.getElementById('tsla-updated').textContent='Updated: '+ts+' (cached)'; const statusEl=document.getElementById('tsla-status'); if(statusEl){ statusEl.textContent='CACHED'; statusEl.className='badge badge-cached'; } pushHistory('tsla', cached.data.price); drawSparkline('tsla-spark', getHistory('tsla')); } else { setCard('tsla', null,null,false); document.getElementById('tsla-updated').textContent='Updated: --'; const statusEl=document.getElementById('tsla-status'); if(statusEl){ statusEl.textContent='ERROR'; statusEl.className='badge badge-error'; } } }
+      try {
+        const q = await getTwelveQuote('TSLA'); const price = parseFloat(q.close); const pct = parseFloat(q.percent_change);
+        setCard('tsla', price, pct, false); cacheSet('tsla',{ price,pct });
+        document.getElementById('tsla-updated').textContent='Updated: '+new Date().toLocaleTimeString();
+        const statusEl=document.getElementById('tsla-status'); if(statusEl){ statusEl.textContent='LIVE'; statusEl.className='badge badge-live'; }
+        pushHistory('tsla', price); drawSparkline('tsla-spark', getHistory('tsla'));
+      } catch(e){
+        console.error('TSLA error', e); const cached=cacheGet('tsla');
+        if(cached?.data){
+          setCard('tsla', cached.data.price, cached.data.pct,true);
+          const ts=cached.ts?new Date(cached.ts).toLocaleTimeString():'--';
+          document.getElementById('tsla-updated').textContent='Updated: '+ts+' (cached)';
+          const statusEl=document.getElementById('tsla-status'); if(statusEl){ statusEl.textContent='CACHED'; statusEl.className='badge badge-cached'; }
+          pushHistory('tsla', cached.data.price); drawSparkline('tsla-spark', getHistory('tsla'));
+        } else {
+          setCard('tsla', null,null,false);
+          document.getElementById('tsla-updated').textContent='Updated: --';
+          const statusEl=document.getElementById('tsla-status'); if(statusEl){ statusEl.textContent='ERROR'; statusEl.className='badge badge-error'; }
+        }
+      }
     }
 
-    async function refreshLithium() { /* unchanged */
+    async function refreshLithium() {
       const spinner=document.getElementById('lithium-spinner'); if(spinner) spinner.style.display='inline-block';
-      try{ const q=await getTwelveQuote('LIT'); const price=parseFloat(q.close); const pct=parseFloat(q.percent_change); setCard('lithium', price, pct,false); cacheSet('lithium',{ price,pct }); document.getElementById('lithium-updated').textContent='Updated: '+new Date().toLocaleTimeString(); const statusEl=document.getElementById('lithium-status'); if(statusEl){ statusEl.textContent='LIVE'; statusEl.className='badge badge-live'; } }
-      catch(e){ console.error('Lithium error', e); const cached=cacheGet('lithium'); if(cached?.data){ setCard('lithium', cached.data.price, cached.data.pct,true); const ts=cached.ts?new Date(cached.ts).toLocaleTimeString():'--'; document.getElementById('lithium-updated').textContent='Updated: '+ts+' (cached)'; const statusEl=document.getElementById('lithium-status'); if(statusEl){ statusEl.textContent='CACHED'; statusEl.className='badge badge-cached'; } } else { setCard('lithium',null,null,false); document.getElementById('lithium-updated').textContent='Updated: --'; const statusEl=document.getElementById('lithium-status'); if(statusEl){ statusEl.textContent='ERROR'; statusEl.className='badge badge-error'; } } }
+      try{
+        const q=await getTwelvedataQuote('LIT') || await getTwelveQuote('LIT'); // fallback
+        const price=parseFloat(q.close);
+        const pct=parseFloat(q.percent_change);
+        setCard('lithium', price, pct,false); cacheSet('lithium',{ price,pct });
+        document.getElementById('lithium-updated').textContent='Updated: '+new Date().toLocaleTimeString();
+        const statusEl=document.getElementById('lithium-status'); if(statusEl){ statusEl.textContent='LIVE'; statusEl.className='badge badge-live'; }
+      }
+      catch(e){
+        console.error('Lithium error', e);
+        const cached=cacheGet('lithium');
+        if(cached?.data){
+          setCard('lithium', cached.data.price, cached.data.pct,true);
+          const ts=cached.ts?new Date(cached.ts).toLocaleTimeString():'--';
+          document.getElementById('lithium-updated').textContent='Updated: '+ts+' (cached)';
+          const statusEl=document.getElementById('lithium-status'); if(statusEl){ statusEl.textContent='CACHED'; statusEl.className='badge badge-cached'; }
+        } else {
+          setCard('lithium',null,null,false);
+          document.getElementById('lithium-updated').textContent='Updated: --';
+          const statusEl=document.getElementById('lithium-status'); if(statusEl){ statusEl.textContent='ERROR'; statusEl.className='badge badge-error'; }
+        }
+      }
     }
 
-    async function refreshVIX() { /* unchanged */
+    async function refreshVIX() {
       const spinner=document.getElementById('vix-spinner'); if(spinner) spinner.style.display='inline-block';
-      try{ const q=await getTwelveQuote('VIXY'); const price=parseFloat(q.close); const pct=parseFloat(q.percent_change); setCard('vix', price, pct,false); cacheSet('vix',{ price,pct }); document.getElementById('vix-updated').textContent='Updated: '+new Date().toLocaleTimeString(); const statusEl=document.getElementById('vix-status'); if(statusEl){ statusEl.textContent='LIVE'; statusEl.className='badge badge-live'; } }
-      catch(e){ console.error('VIXY error', e); const cached=cacheGet('vix'); if(cached?.data){ setCard('vix', cached.data.price, cached.data.pct,true); const ts=cached.ts?new Date(ccached.ts).toLocaleTimeString():'--'; document.getElementById('vix-updated').textContent='Updated: '+ts+' (cached)'; const statusEl=document.getElementById('vix-status'); if(statusEl){ statusEl.textContent='CACHED'; statusEl.className='badge badge-cached'; } } else { setCard('vix',null,null,false); document.getElementById('vix-updated').textContent='Updated: --'; const statusEl=document.getElementById('vix-status'); if(statusEl){ statusEl.textContent='ERROR'; statusEl.className='badge badge-error'; } } }
+      try{
+        const q=await getTwelveQuote('VIXY');
+        const price=parseFloat(q.close);
+        const pct=parseFloat(q.percent_change);
+        setCard('vix', price, pct,false);
+        cacheSet('vix',{ price,pct });
+        document.getElementById('vix-updated').textContent='Updated: '+new Date().toLocaleTimeString();
+        const statusEl=document.getElementById('vix-status'); if(statusEl){ statusEl.textContent='LIVE'; statusEl.className='badge badge-live'; }
+      }
+      catch(e){
+        console.error('VIXY error', e);
+        const cached=cacheGet('vix');
+        if(cached?.data){
+          setCard('vix', cached.data.price, cached.data.pct,true);
+          const ts=cached.ts? new Date(cached.ts).toLocaleTimeString():'--';
+          document.getElementById('vix-updated').textContent='Updated: '+ts+' (cached)';
+          const statusEl=document.getElementById('vix-status'); if(statusEl){ statusEl.textContent='CACHED'; statusEl.className='badge badge-cached'; }
+        } else {
+          setCard('vix',null,null,false);
+          document.getElementById('vix-updated').textContent='Updated: --';
+          const statusEl=document.getElementById('vix-status'); if(statusEl){ statusEl.textContent='ERROR'; statusEl.className='badge badge-error'; }
+        }
+      }
     }
 
-    async function refreshVIXIndex() { /* unchanged */
+    async function refreshVIXIndex() {
       const spinner=document.getElementById('vix-index-spinner'); if (spinner) spinner.style.display='inline-block';
-      try{ const res=await fetch('/.netlify/functions/vixIndex'); const json=await res.json(); if(json.error) throw new Error(json.error); const price=parseFloat(json.price); const change=json.changePercent!=null?parseFloat(json.changePercent):null; setCard('vix-index', price, change,false); cacheSet('vix-index',{ price, change }); document.getElementById('vix-index-updated').textContent='Updated: '+new Date().toLocaleTimeString(); const statusEl=document.getElementById('vix-index-status'); if(statusEl){ statusEl.textContent='LIVE'; statusEl.className='badge badge-live'; } }
-      catch(e){ console.error('VIX index error', e); const cached=cacheGet('vix-index'); if(cached?.data){ setCard('vix-index', cached.data.price, cached.data.change,true); const ts=cached.ts? new Date(cached.ts).toLocaleTimeString():'--'; document.getElementById('vix-index-updated').textContent='Updated: '+ts+' (cached)'; const statusEl=document.getElementById('vix-index-status'); if(statusEl){ statusEl.textContent='CACHED'; statusEl.className='badge badge-cached'; } } else { if(document.getElementById('vix-index')) document.getElementById('vix-index').textContent='No data'; document.getElementById('vix-index-change').textContent=''; document.getElementById('vix-index-updated').textContent='Updated: --'; const statusEl=document.getElementById('vix-index-status'); if(statusEl){ statusEl.textContent='NO DATA'; statusEl.className='badge'; } } }
+      try{
+        const res=await fetch('/.netlify/functions/vixIndex');
+        const json=await res.json();
+        if(json.error) throw new Error(json.error);
+        const price=parseFloat(json.price);
+        const change=json.changePercent!=null?parseFloat(json.changePercent):null;
+        setCard('vix-index', price, change,false);
+        cacheSet('vix-index',{ price, change });
+        document.getElementById('vix-index-updated').textContent='Updated: '+new Date().toLocaleTimeString();
+        const statusEl=document.getElementById('vix-index-status'); if(statusEl){ statusEl.textContent='LIVE'; statusEl.className='badge badge-live'; }
+      }
+      catch(e){
+        console.error('VIX index error', e);
+        const cached=cacheGet('vix-index');
+        if(cached?.data){
+          setCard('vix-index', cached.data.price, cached.data.change,true);
+          const ts=cached.ts? new Date(cached.ts).toLocaleTimeString():'--';
+          document.getElementById('vix-index-updated').textContent='Updated: '+ts+' (cached)';
+          const statusEl=document.getElementById('vix-index-status'); if(statusEl){ statusEl.textContent='CACHED'; statusEl.className='badge badge-cached'; }
+        } else {
+          if(document.getElementById('vix-index')) document.getElementById('vix-index').textContent='No data';
+          document.getElementById('vix-index-change').textContent='';
+          document.getElementById('vix-index-updated').textContent='Updated: --';
+          const statusEl=document.getElementById('vix-index-status'); if(statusEl){ statusEl.textContent='NO DATA'; statusEl.className='badge'; }
+        }
+      }
     }
 
     function refreshRiskTemperature() {
@@ -439,7 +525,6 @@
 
       if (labelEl) {
         labelEl.textContent = statusText;
-        // color derives from the gradient position (smooth) instead of fixed badges
         labelEl.style.color = color;
         labelEl.style.background = 'none';
         labelEl.className = '';
