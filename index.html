@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Market Warning Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #f5f7fa;
+      --card-bg: #ffffff;
+      --radius: 20px;
+      --shadow: 0 25px 60px -15px rgba(50, 75, 125, 0.1);
+      --transition: 0.35s cubic-bezier(.4,.2,.2,1);
+      --text-primary: #1f2d45;
+      --text-secondary: #637392;
+      --border: #e6e9f0;
+      --live: #00d084;
+      --cached: #8c9bb1;
+      --error: #ff5c5c;
+      --muted: #a8b0c0;
+      --gradient: linear-gradient(135deg,#eef5fc 0%,#ffffff 60%);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 1.5rem 1rem 3rem;
+      background: #e8ebf5;
+      font-family: 'Inter', system-ui,-apple-system,BlinkMacSystemFont,sans-serif;
+      color: var(--text-primary);
+      min-height: 100vh;
+    }
+    .app {
+      max-width: 1400px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+    .header {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      padding: .75rem 1rem;
+      gap: 0.5rem;
+    }
+    .title {
+      font-size: 1.4rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: .5rem;
+    }
+    .sub {
+      font-size: .85rem;
+      color: var(--text-secondary);
+      margin-top: 2px;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 1rem;
+      margin-top: .5rem;
+    }
+    .card {
+      position: relative;
+      background: var(--card-bg);
+      border-radius: var(--radius);
+      padding: 1.25rem 1rem 1.5rem;
+      box-shadow: var(--shadow);
+      display: flex;
+      flex-direction: column;
+      transition: transform var(--transition), box-shadow var(--transition);
+      overflow: hidden;
+    }
+    .card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 35px 70px -20px rgba(50, 75, 125, 0.15);
+    }
+    .card h2 {
+      margin: 0;
+      font-size: .95rem;
+      font-weight: 600;
+      letter-spacing: .5px;
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+    }
+    .value {
+      font-size: 2.2rem;
+      font-weight: 700;
+      margin-top: .4rem;
+      display: flex;
+      align-items: baseline;
+      gap: 6px;
+    }
+    .small-label {
+      font-size: .55rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+    .change {
+      font-size: .85rem;
+      margin-top: 4px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .up { color: var(--live); }
+    .down { color: var(--error); }
+    .badge {
+      font-size: .55rem;
+      padding: 6px 12px;
+      border-radius: 999px;
+      font-weight: 600;
+      display: inline-block;
+      margin-left: 6px;
+      text-transform: uppercase;
+      letter-spacing: .5px;
+    }
+    .badge-live { background: var(--live); color: #000; }
+    .badge-cached { background: var(--cached); color: #fff; }
+    .badge-error { background: var(--error); color: #fff; }
+    .timestamp { font-size: .55rem; margin-top: 6px; color: var(--muted); }
+    .stale { font-size: .55rem; color: var(--muted); margin-top: 2px; }
+    .spinner {
+      width: 16px;
+      height: 16px;
+      border: 3px solid rgba(0,0,0,0.1);
+      border-top: 3px solid #6366f1;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      display: inline-block;
+      vertical-align: middle;
+      margin-left: 4px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .indicator-line {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      height: 4px;
+      width: 100%;
+      background: linear-gradient(90deg,var(--live) 0%, var(--cached) 60%, var(--error) 100%);
+    }
+    .mini {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    .note {
+      font-size: .55rem;
+      color: var(--text-secondary);
+      margin-top: 6px;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="app">
+    <div class="header">
+      <div>
+        <div class="title">Market Warning Dashboard</div>
+        <div class="sub">Real-time risk snapshot · Live / Cached / Alerts</div>
+      </div>
+      <div style="font-size:.9rem; display:flex; gap:1rem; flex-wrap:wrap;">
+        <div>Updated: <span id="global-updated">--:--:--</span></div>
+        <div><span class="badge badge-live">LIVE</span> <span class="badge badge-cached">CACHED</span> <span class="badge badge-error">ERROR</span></div>
+      </div>
+    </div>
+
+    <div class="grid">
+      <!-- SPY -->
+      <div class="card">
+        <div class="small-label">Equity</div>
+        <h2>S&P 500 (SPY)</h2>
+        <div class="value" id="sp500">
+          -- <span id="sp500-spinner" class="spinner" style="display:none;"></span>
+        </div>
+        <div class="mini">
+          <div class="change" id="sp500-change"></div>
+          <div id="sp500-status" class="badge">--</div>
+        </div>
+        <div class="stale" id="sp500-stale" style="display:none;">Using cached value</div>
+        <div class="timestamp" id="sp500-updated">Updated: --</div>
+      </div>
+
+      <!-- TSLA -->
+      <div class="card">
+        <div class="small-label">Equity</div>
+        <h2>Tesla (TSLA)</h2>
+        <div class="value" id="tsla">
+          -- <span id="tsla-spinner" class="spinner" style="display:none;"></span>
+        </div>
+        <div class="mini">
+          <div class="change" id="tsla-change"></div>
+          <div id="tsla-status" class="badge">--</div>
+        </div>
+        <div class="stale" id="tsla-stale" style="display:none;">Using cached value</div>
+        <div class="timestamp" id="tsla-updated">Updated: --</div>
+      </div>
+
+      <!-- Lithium -->
+      <div class="card">
+        <div class="small-label">Commodity Proxy</div>
+        <h2>Lithium Spot Proxy (LIT ETF)</h2>
+        <div class="value" id="lithium">
+          -- <span id="lithium-spinner" class="spinner" style="display:none;"></span>
+        </div>
+        <div class="mini">
+          <div class="change" id="lithium-change"></div>
+          <div id="lithium-status" class="badge">--</div>
+        </div>
+        <div class="stale" id="lithium-stale" style="display:none;">Using cached value</div>
+        <div class="timestamp" id="lithium-updated">Updated: --</div>
+      </div>
+
+      <!-- VIXY -->
+      <div class="card">
+        <div class="small-label">Volatility</div>
+        <h2>VIXY</h2>
+        <div class="value" id="vix">
+          -- <span id="vix-spinner" class="spinner" style="display:none;"></span>
+        </div>
+        <div class="mini">
+          <div class="change" id="vix-change"></div>
+          <div id="vix-status" class="badge">--</div>
+        </div>
+        <div class="stale" id="vix-stale" style="display:none;">Using cached value</div>
+        <div class="timestamp" id="vix-updated">Updated: --</div>
+      </div>
+
+      <!-- VIX index -->
+      <div class="card">
+        <div class="small-label">Volatility</div>
+        <h2>VIX Index (^VIX)</h2>
+        <div class="value" id="vix-index">
+          -- <span id="vix-index-spinner" class="spinner" style="display:none;"></span>
+        </div>
+        <div class="mini">
+          <div class="change" id="vix-index-change"></div>
+          <div id="vix-index-status" class="badge">--</div>
+        </div>
+        <div class="stale" id="vix-index-stale" style="display:none;">Using cached value</div>
+        <div class="timestamp" id="vix-index-updated">Updated: --</div>
+      </div>
+
+      <!-- Yield Curve -->
+      <div class="card">
+        <div class="small-label">Macro</div>
+        <h2>10Y − 2Y Yield Curve Spread</h2>
+        <div class="value" id="yield">
+          -- <span id="yield-spinner" class="spinner" style="display:none;"></span>
+        </div>
+        <div class="mini">
+          <div class="change" id="yield-change"></div>
+          <div id="yield-status" class="badge">--</div>
+        </div>
+        <div class="stale" id="yield-stale" style="display:none;">Using cached value</div>
+        <div class="timestamp" id="yield-updated">Updated: --</div>
+      </div>
+
+      <!-- Buffett -->
+      <div class="card">
+        <div class="small-label">Valuation</div>
+        <h2>Buffett Indicator</h2>
+        <div class="value" id="buffett">
+          -- <span id="buffett-spinner" class="spinner" style="display:none;"></span>
+        </div>
+        <div class="mini">
+          <div class="change" id="buffett-change"></div>
+          <div id="buffett-status" class="badge">--</div>
+        </div>
+        <div class="stale" id="buffett-stale" style="display:none;">Using cached value</div>
+        <div class="timestamp" id="buffett-updated">Updated: --</div>
+        <div class="note">Market cap / GDP. High readings signal overvaluation.</div>
+      </div>
+
+      <!-- Estimated Buffett -->
+      <div class="card">
+        <div class="small-label">Valuation</div>
+        <h2>Estimated Buffett (S&P scaled)</h2>
+        <div style="font-size:.6rem;margin-top:2px;">Approx: S&P 500 cap × 1.30 / GDP</div>
+        <div class="value" id="estimated-buffett">
+          -- <span id="estimated-buffett-spinner" class="spinner" style="display:none;"></span>
+        </div>
+        <div class="mini">
+          <div class="change" id="estimated-buffett-change"></div>
+          <div id="estimated-buffett-status" class="badge">--</div>
+        </div>
+        <div class="stale" id="estimated-buffett-stale" style="display:none;">Using cached value</div>
+        <div class="timestamp" id="estimated-buffett-updated">Updated: --</div>
+      </div>
+    </div>
+
+    <div class="note" style="margin-top:1rem;">
+      Data sources: TwelveData for ETFs, Netlify functions for VIX index, yield spread, Buffett indicators.<br>
+      RULE: Working widgets are isolated. New features or refactors only after testing separately.
+    </div>
+  </div>
+
+  <script>
+    // Same core logic as before: TwelveData key + helpers
+    const TWELVE_KEY = '26137bba624c4dcb9b5284ad1b234071';
+
+    function cacheSet(key, obj) { try { localStorage.setItem(key, JSON.stringify({ ts: Date.now(), data: obj })); } catch {} }
+    function cacheGet(key) { try { return JSON.parse(localStorage.getItem(key)); } catch { return null; } }
+
+    async function fetchWithRetry(url, attempts = 3, baseDelay = 300) {
+      for (let i = 0; i < attempts; i++) {
+        try {
+          const res = await fetch(url);
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          return await res.json();
+        } catch (e) {
+          if (i === attempts - 1) throw e;
+          await new Promise(r => setTimeout(r, baseDelay * (i + 1)));
+        }
+      }
+    }
+
+    async function getTwelveQuote(symbol) {
+      const url = `https://api.twelvedata.com/quote?symbol=${encodeURIComponent(symbol)}&apikey=${TWELVE_KEY}`;
+      const json = await fetchWithRetry(url);
+      if (!json || json.status === 'error' || typeof json.close === 'undefined') throw new Error(`Bad data for ${symbol}`);
+      return json;
+    }
+
+    function setCard(id, value, change, useCache = false) {
+      const valEl = document.getElementById(id);
+      const changeEl = document.getElementById(id + '-change');
+      const staleEl = document.getElementById(id + '-stale');
+      const statusEl = document.getElementById(id + '-status');
+      if (value === null || value === undefined || isNaN(value)) {
+        if (valEl) valEl.textContent = 'Error';
+        if (changeEl) changeEl.textContent = '';
+        if (staleEl) staleEl.style.display = 'none';
+        if (statusEl) { statusEl.textContent = 'ERROR'; statusEl.className='badge badge-error'; }
+        return;
+      }
+      if (valEl) valEl.textContent = parseFloat(value).toFixed(2);
+      if (typeof change === 'number' && changeEl) {
+        const arrow = change >= 0 ? '▲' : '▼';
+        changeEl.textContent = `${arrow} ${Math.abs(change).toFixed(2)}%`;
+        changeEl.className = 'change ' + (change >= 0 ? 'up' : 'down');
+      }
+      if (staleEl) staleEl.style.display = useCache ? 'block' : 'none';
+    }
+
+    // SPY
+    async function refreshSPY() {
+      const spinner = document.getElementById('sp500-spinner');
+      if (spinner) spinner.style.display = 'inline-block';
+      try {
+        const q = await getTwelveQuote('SPY');
+        const price = parseFloat(q.close);
+        const pct = parseFloat(q.percent_change);
+        setCard('sp500', price, pct, false);
+        cacheSet('sp500', { price, pct });
+        document.getElementById('sp500-updated').textContent = 'Updated: ' + new Date().toLocaleTimeString();
+        const statusEl = document.getElementById('sp500-status');
+        if (statusEl){ statusEl.textContent='LIVE'; statusEl.className='badge badge-live'; }
+      } catch (e) {
+        console.error('SPY error', e);
+        const cached = cacheGet('sp500');
+        if (cached?.data) {
+          setCard('sp500', cached.data.price, cached.data.pct, true);
+          const ts = cached.ts ? new Date(cached.ts).toLocaleTimeString() : '--';
+          document.getElementById('sp500-updated').textContent = 'Updated: ' + ts + ' (cached)';
+          const statusEl = document.getElementById('sp500-status');
+          if (statusEl){ statusEl.textContent='CACHED'; statusEl.className='badge badge-cached'; }
+        } else {
+          setCard('sp500', null, null, false);
+          document.getElementById('sp500-updated').textContent = 'Updated: --';
+          const statusEl = document.getElementById('sp500-status');
+          if (statusEl){ statusEl.textContent='ERROR'; statusEl.className='badge badge-error'; }
+        }
+      } finally { if (spinner) spinner.style.display = 'none'; }
+    }
+
+    // TSLA
+    async function refreshTSLA() {
+      const spinner = document.getElementById('tsla-spinner');
+      if (spinner) spinner.style.display = 'inline-block';
+      try {
+        const q = await getTwelveQuote('TSLA');
+        const price = parseFloat(q.close);
+        const pct = parseFloat(q.percent_change);
+        setCard('tsla', price, pct, false);
+        cacheSet('tsla', { price, pct });
+        document.getElementById('tsla-updated').textContent = 'Updated: ' + new Date().toLocaleTimeString();
+        const statusEl = document.getElementById('tsla-status');
+        if (statusEl){ statusEl.textContent='LIVE'; statusEl.className='badge badge-live'; }
+      } catch (e) {
+        console.error('TSLA error', e);
+        const cached = cacheGet('tsla');
+        if (cached?.data) {
+          setCard('tsla', cached.data.price, cached.data.pct, true);
+          const ts = cached.ts ? new Date(cached.ts).toLocaleTimeString() : '--';
+          document.getElementById('tsla-updated').textContent = 'Updated: ' + ts + ' (cached)';
+          const statusEl = document.getElementById('tsla-status');
+          if (statusEl){ statusEl.textContent='CACHED'; statusEl.className='badge badge-cached'; }
+        } else {
+          setCard('tsla', null, null, false);
+          document.getElementById('tsla-updated').textContent = 'Updated: --';
+          const statusEl = document.getElementById('tsla-status');
+          if (statusEl){ statusEl.textContent='ERROR'; statusEl.className='badge badge-error'; }
+        }
+      } finally { if (spinner) spinner.style.display = 'none'; }
+    }
+
+    // Lithium
+    async function refreshLithium() {
+      const spinner = document.getElementById('lithium-spinner');
+      if (spinner) spinner.style.display = 'inline-block';
+      try {
+        const q = await getTwelveQuote('LIT');
+        const price = parseFloat(q.close);
+        const pct = parseFloat(q.percent_change);
+        setCard('lithium', price, pct, false);
+        cacheSet('lithium', { price, pct });
+        document.getElementById('lithium-updated').textContent = 'Updated: ' + new Date().toLocaleTimeString();
+        const statusEl = document.getElementById('lithium-status');
+        if (statusEl){ statusEl.textContent='LIVE'; statusEl.className='badge badge-live'; }
+      } catch (e) {
+        console.error('Lithium (LIT) error', e);
+        const cached = cacheGet('lithium');
+        if (cached?.data) {
+          setCard('lithium', cached.data.price, cached.data.pct, true);
+          const ts = cached.ts ? new Date(cached.ts).toLocaleTimeString() : '--';
+          document.getElementById('lithium-updated').textContent = 'Updated: ' + ts + ' (cached)';
+          const statusEl = document.getElementById('lithium-status');
+          if (statusEl){ statusEl.textContent='CACHED'; statusEl.className='badge badge-cached'; }
+        } else {
+          setCard('lithium', null, null, false);
+          document.getElementById('lithium-updated').textContent = 'Updated: --';
+          const statusEl = document.getElementById('lithium-status');
+          if (statusEl){ statusEl.textContent='ERROR'; statusEl.className='badge badge-error'; }
+        }
+      } finally { if (spinner) spinner.style.display = 'none'; }
+    }
+
+    // VIXY
+    async function refreshVIX() {
+      const spinner = document.getElementById('vix-spinner');
+      if (spinner) spinner.style.display = 'inline-block';
+      try {
+        const q = await getTwelveQuote('VIXY');
+        const price = parseFloat(q.close);
+        const pct = parseFloat(q.percent_change);
+        setCard('vix', price, pct, false);
+        cacheSet('vix', { price, pct });
+        document.getElementById('vix-updated').textContent = 'Updated: ' + new Date().toLocaleTimeString();
+        const statusEl = document.getElementById('vix-status');
+        if (statusEl){ statusEl.textContent='LIVE'; statusEl.className='badge badge-live'; }
+      } catch (e) {
+        console.error('VIXY error', e);
+        const cached = cacheGet('vix');
+        if (cached?.data) {
+          setCard('vix', cached.data.price, cached.data.pct, true);
+          const ts = cached.ts ? new Date(cached.ts).toLocaleTimeString() : '--';
+          document.getElementById('vix-updated').textContent = 'Updated: ' + ts + ' (cached)';
+          const statusEl = document.getElementById('vix-status');
+          if (statusEl){ statusEl.textContent='CACHED'; statusEl.className='badge badge-cached'; }
+        } else {
+          setCard('vix', null, null, false);
+          document.getElementById('vix-updated').textContent = 'Updated: --';
+          const statusEl = document.getElementById('vix-status');
+          if (statusEl){ statusEl.textContent='ERROR'; statusEl.className='badge badge-error'; }
+        }
+      } finally { if (spinner) spinner.style.display = 'none'; }
+    }
+
+    // VIX index
+    async function refreshVIXIndex() {
+      const spinner = document.getElementById('vix-index-spinner');
+      if (spinner) spinner.style.display = 'inline-block';
+      try {
+        const res = await fetch('/.netlify/functions/vixIndex');
+        const json = await res.json();
+        if (json.error) throw new Error(json.error);
+        const price = parseFloat(json.price);
+        const change = json.changePercent != null ? parseFloat(json.changePercent) : null;
+        setCard('vix-index', price, change, false);
+        cacheSet('vix-index', { price, change });
+        document.getElementById('vix-index-updated').textContent = 'Updated: ' + new Date().toLocaleTimeString();
+        const statusEl = document.getElementById('vix-index-status');
+        if (statusEl){ statusEl.textContent='LIVE'; statusEl.className='badge badge-live'; }
+      } catch (e) {
+        console.error('VIX index error', e);
+        const cached = cacheGet('vix-index');
+        if (cached?.data) {
+          setCard('vix-index', cached.data.price, cached.data.change, true);
+          const ts = cached.ts ? new Date(cached.ts).toLocaleTimeString() : '--';
+          document.getElementById('vix-index-updated').textContent = 'Updated: ' + ts + ' (cached)';
+          const statusEl = document.getElementById('vix-index-status');
+          if (statusEl){ statusEl.textContent='CACHED'; statusEl.className='badge badge-cached'; }
+        } else {
+          const valEl = document.getElementById('vix-index');
+          if (valEl) valEl.textContent = 'No data';
+          document.getElementById('vix-index-change').textContent = '';
+          document.getElementById('vix-index-updated').textContent = 'Updated: --';
+          const statusEl = document.getElementById('vix-index-status');
+          if (statusEl){ statusEl.textContent='NO DATA'; statusEl.className='badge'; }
+        }
+      } finally { if (spinner) spinner.style.display = 'none'; }
+    }
+
+    // Yield curve
+    async function refreshYieldCurve() {
+      const spinner = document.getElementById('yield-spinner');
+      if (spinner) spinner.style.display = 'inline-block';
+      try {
+        const res = await fetch('/.netlify/functions/yieldSpread');
+        const json = await res.json();
+        if (json.error) throw new Error(json.error);
+        const spread = json.spread;
+        const inverted = json.inverted;
+        const valEl = document.getElementById('yield');
+        const changeEl = document.getElementById('yield-change');
+        if (valEl) valEl.textContent = `${spread.toFixed(2)}%`;
+        if (changeEl) {
+          const arrow = spread >= 0 ? '▲' : '▼';
+          changeEl.textContent = `${arrow} ${inverted ? 'Inverted' : 'Normal'}`;
+          changeEl.className = 'change ' + (spread >= 0 ? 'up' : 'down');
+        }
+        cacheSet('yield', { spread, inverted });
+        document.getElementById('yield-stale').style.display = 'none';
+        document.getElementById('yield-updated').textContent = 'Updated: ' + new Date().toLocaleTimeString();
+        const statusEl = document.getElementById('yield-status');
+        if (statusEl) { statusEl.textContent='LIVE'; statusEl.className='badge badge-live'; }
+      } catch (e) {
+        console.error('Yield curve fetch failed:', e);
+        const cached = cacheGet('yield');
+        if (cached?.data) {
+          const spread = cached.data.spread;
+          const inverted = cached.data.inverted;
+          const valEl = document.getElementById('yield');
+          const changeEl = document.getElementById('yield-change');
+          if (valEl) valEl.textContent = `${spread.toFixed(2)}%`;
+          if (changeEl) {
+            const arrow = spread >= 0 ? '▲' : '▼';
+            changeEl.textContent = `${arrow} ${inverted ? 'Inverted' : 'Normal'}`;
+            changeEl.className = 'change ' + (spread >= 0 ? 'up' : 'down');
+          }
+          document.getElementById('yield-stale').style.display = 'block';
+          const ts = cached.ts ? new Date(cached.ts).toLocaleTimeString() : '--';
+          document.getElementById('yield-updated').textContent = 'Updated: ' + ts + ' (cached)';
+        } else {
+          setCard('yield', null, null, false);
+          document.getElementById('yield-updated').textContent = 'Updated: --';
+          const statusEl = document.getElementById('yield-status');
+          if (statusEl) { statusEl.textContent='ERROR'; statusEl.className='badge badge-error'; }
+        }
+      } finally { if (spinner) spinner.style.display = 'none'; }
+    }
+
+    // Buffett
+    async function refreshBuffett() {
+      const spinner = document.getElementById('buffett-spinner');
+      if (spinner) spinner.style.display = 'inline-block';
+      try {
+        const res = await fetch('/.netlify/functions/buffett');
+        if (!res.ok) throw new Error(`HTTP ${res.status} from Buffett function`);
+        const contentType = res.headers.get('Content-Type') || '';
+        if (!contentType.includes('application/json')) {
+          const text = await res.text();
+          throw new Error(`Expected JSON but got: ${text.slice(0,200)}`);
+        }
+        const json = await res.json();
+        if (json.error) throw new Error(json.error);
+        const ratio = json.ratio;
+        const overvalued = json.overvalued;
+        const valEl = document.getElementById('buffett');
+        const changeEl = document.getElementById('buffett-change');
+        const statusEl = document.getElementById('buffett-status');
+        const staleEl = document.getElementById('buffett-stale');
+        const updatedEl = document.getElementById('buffett-updated');
+        if (valEl) valEl.textContent = `${ratio.toFixed(2)}%`;
+        if (changeEl) {
+          changeEl.textContent = overvalued ? '▲ Overvalued' : '▼ Normal';
+          changeEl.className = 'change ' + (overvalued ? 'up' : 'down');
+        }
+        if (staleEl) staleEl.style.display = 'none';
+        if (updatedEl) updatedEl.textContent = 'Updated: ' + new Date().toLocaleTimeString();
+        if (statusEl) { statusEl.textContent='LIVE'; statusEl.className='badge badge-live'; }
+        cacheSet('buffett', { ratio: json.ratio, overvalued: json.overvalued });
+      } catch (e) {
+        console.error('Buffett indicator failed:', e);
+        const cached = cacheGet('buffett');
+        const valEl = document.getElementById('buffett');
+        const changeEl = document.getElementById('buffett-change');
+        const statusEl = document.getElementById('buffett-status');
+        const staleEl = document.getElementById('buffett-stale');
+        const updatedEl = document.getElementById('buffett-updated');
+        if (cached?.data) {
+          const ratio = cached.data.ratio;
+          const overvalued = cached.data.overvalued;
+          if (valEl) valEl.textContent = `${ratio.toFixed(2)}%`;
+          if (changeEl) {
+            changeEl.textContent = overvalued ? '▲ Overvalued' : '▼ Normal';
+            changeEl.className = 'change ' + (overvalued ? 'up' : 'down');
+          }
+          if (staleEl) staleEl.style.display = 'block';
+          const ts = cached.ts ? new Date(cached.ts).toLocaleTimeString() : '--';
+          if (updatedEl) updatedEl.textContent = 'Updated: ' + ts + ' (cached)';
+          if (statusEl) { statusEl.textContent='CACHED'; statusEl.className='badge badge-cached'; }
+        } else {
+          if (valEl) valEl.textContent='Error';
+          if (changeEl) changeEl.textContent=''; 
+          if (statusEl){ statusEl.textContent='ERROR'; statusEl.className='badge badge-error'; }
+          if (staleEl) staleEl.style.display='none';
+          if (updatedEl) updatedEl.textContent='Updated: --';
+        }
+      } finally { if (spinner) spinner.style.display = 'none'; }
+    }
+
+    // Estimated Buffett
+    async function refreshEstimatedBuffett() {
+      const spinner = document.getElementById('estimated-buffett-spinner');
+      if (spinner) spinner.style.display = 'inline-block';
+      try {
+        const res = await fetch('/.netlify/functions/estimatedBuffett');
+        if (!res.ok) throw new Error(`HTTP ${res.status} from estimatedBuffett function`);
+        const json = await res.json();
+        if (json.error) throw new Error(json.error);
+        const ratio = json.ratio;
+        const overvalued = json.overvalued;
+        const valEl = document.getElementById('estimated-buffett');
+        const changeEl = document.getElementById('estimated-buffett-change');
+        const statusEl = document.getElementById('estimated-buffett-status');
+        const staleEl = document.getElementById('estimated-buffett-stale');
+        const updatedEl = document.getElementById('estimated-buffett-updated');
+        if (valEl) valEl.textContent = `${ratio.toFixed(2)}%`;
+        if (changeEl) {
+          changeEl.textContent = overvalued ? '▲ Overvalued' : '▼ Normal';
+          changeEl.className = 'change ' + (overvalued ? 'up' : 'down');
+        }
+        if (staleEl) staleEl.style.display = 'none';
+        if (updatedEl) updatedEl.textContent = 'Updated: ' + new Date().toLocaleTimeString();
+        if (statusEl) { statusEl.textContent='LIVE'; statusEl.className='badge badge-live'; }
+        cacheSet('estimated-buffett', { ratio: json.ratio, overvalued: json.overvalued });
+      } catch (e) {
+        console.error('Estimated Buffett failed:', e);
+        const cached = cacheGet('estimated-buffett');
+        const valEl = document.getElementById('estimated-buffett');
+        const changeEl = document.getElementById('estimated-buffett-change');
+        const statusEl = document.getElementById('estimated-buffett-status');
+        const staleEl = document.getElementById('estimated-buffett-stale');
+        const updatedEl = document.getElementById('estimated-buffett-updated');
+        if (cached?.data) {
+          const ratio = cached.data.ratio;
+          const overvalued = cached.data.overvalued;
+          if (valEl) valEl.textContent = `${ratio.toFixed(2)}%`;
+          if (changeEl) {
+            changeEl.textContent = overvalued ? '▲ Overvalued' : '▼ Normal';
+            changeEl.className = 'change ' + (overvalued ? 'up' : 'down');
+          }
+          if (staleEl) staleEl.style.display = 'block';
+          const ts = cached.ts ? new Date(cached.ts).toLocaleTimeString() : '--';
+          if (updatedEl) updatedEl.textContent = 'Updated: ' + ts + ' (cached)';
+          if (statusEl) { statusEl.textContent='CACHED'; statusEl.className='badge badge-cached'; }
+        } else {
+          if (valEl) valEl.textContent='Error';
+          if (changeEl) changeEl.textContent=''; 
+          if (statusEl){ statusEl.textContent='ERROR'; statusEl.className='badge badge-error'; }
+          if (staleEl) staleEl.style.display='none';
+          if (updatedEl) updatedEl.textContent='Updated: --'; 
+        }
+      } finally { if (spinner) spinner.style.display = 'none'; }
+    }
+
+    function updateGlobalTimestamp() {
+      document.getElementById('global-updated').textContent = new Date().toLocaleTimeString();
+    }
+
+    function boot() {
+      refreshSPY();
+      refreshTSLA();
+      refreshLithium();
+      refreshVIX();
+      refreshVIXIndex();
+      refreshYieldCurve();
+      refreshBuffett();
+      refreshEstimatedBuffett();
+      updateGlobalTimestamp();
+      setInterval(() => {
+        refreshSPY();
+        refreshTSLA();
+        refreshLithium();
+        refreshVIX();
+        refreshVIXIndex();
+        refreshYieldCurve();
+        refreshBuffett();
+        refreshEstimatedBuffett();
+        updateGlobalTimestamp();
+      }, 120000);
+    }
+
+    document.addEventListener('DOMContentLoaded', boot);
+  </script>
+</body>
+</html>
