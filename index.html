@@ -88,7 +88,10 @@
             <div class="temp-marker" id="risk-temp-marker" style="left:0;background:rgba(255,255,255,0.9);"></div>
           </div>
         </div>
-        <div class="temp-label" id="risk-temp-details">Loading...</div>
+        <div class="temp-label" id="risk-temp-details">
+        Weighted aggregate score of all indicators
+        </div>
+
         <div class="timestamp" id="risk-temp-updated">Updated: --</div>
       </div>
 
@@ -562,61 +565,97 @@
       }
     }
 
-    function refreshRiskTemperature() {
-      const now = new Date();
-      const est = cacheGet('estimated-buffett')?.data;
-      const yieldc = cacheGet('yield')?.data;
-      const spy = cacheGet('sp500')?.data;
-      const vixy = cacheGet('vix')?.data;
-      const tsla = cacheGet('tsla')?.data;
+function refreshRiskTemperature() {
+  const now     = new Date();
+  const est     = cacheGet('estimated-buffett')?.data;
+  const yieldc  = cacheGet('yield')?.data;
+  const spy     = cacheGet('sp500')?.data;
+  const vixy    = cacheGet('vix')?.data;
+  const tsla    = cacheGet('tsla')?.data;
+  const lithium = cacheGet('lithium')?.data;
 
-      let score = 0;
-      const contributors = [];
+  let score = 0;
+  const contributors = [];
 
-      if (yieldc && yieldc.spread < 0) { score += 25; contributors.push('Yield inverted'); }
-      if (est && est.ratio >= 3.0) { score += 30; contributors.push(`Est. Buffett ≥ ${est.ratio.toFixed(2)}`); }
-      if (spy && typeof spy.pct === 'number' && spy.pct <= -1) { score += 10; contributors.push(`SPY down ${spy.pct.toFixed(2)}%`); }
-      if (vixy && typeof vixy.pct === 'number' && vixy.pct >= 5) { score += 10; contributors.push(`VIXY up ${vixy.pct.toFixed(2)}%`); }
-      if (tsla && typeof tsla.pct === 'number' && tsla.pct <= -1.5) { score += 10; contributors.push(`TSLA down ${tsla.pct.toFixed(2)}%`); }
+  // 1) Buffett valuation: 0–5% → 0–30 pts
+  if (est && typeof est.ratio === 'number') {
+    const buffScore = Math.min(est.ratio, 5) * 6;
+    score += buffScore;
+    contributors.push(`Buffett ${est.ratio.toFixed(2)}% → ${buffScore.toFixed(1)}`);
+  }
 
-      score = Math.min(100, score);
+  // 2) Yield spread: +2…–1 pp → 0–25 pts
+  if (yieldc && typeof yieldc.spread === 'number') {
+    const raw       = Math.max(Math.min(yieldc.spread, 2), -1);
+    const yieldScore = (2 - raw) / 3 * 25;
+    score += yieldScore;
+    contributors.push(`Yield ${yieldc.spread.toFixed(2)}% → ${yieldScore.toFixed(1)}`);
+  }
 
-      const marker = document.getElementById('risk-temp-marker');
-      const labelEl = document.getElementById('risk-temp-status');
-      const scoreEl = document.getElementById('risk-temp-score');
-      const detailsEl = document.getElementById('risk-temp-details');
-      const updatedEl = document.getElementById('risk-temp-updated');
+  // 3) SPY drop: 0…–3% → 0–15 pts
+  if (spy && typeof spy.pct === 'number') {
+    const spyScore = Math.min(Math.max(-spy.pct, 0), 3) / 3 * 15;
+    score += spyScore;
+    contributors.push(`SPY ${spy.pct.toFixed(2)}% → ${spyScore.toFixed(1)}`);
+  }
 
-      const color = riskColor(score);
+  // 4) VIXY rise: 0…+5% → 0–15 pts
+  if (vixy && typeof vixy.pct === 'number') {
+    const vixScore = Math.min(Math.max(vixy.pct, 0), 5) / 5 * 15;
+    score += vixScore;
+    contributors.push(`VIXY ${vixy.pct.toFixed(2)}% → ${vixScore.toFixed(1)}`);
+  }
 
-      if (marker) {
-        marker.style.left = `${score}%`;
-        marker.style.background = color;
-      }
-      const needle = document.getElementById('risk-temp-needle');
-      if (needle) {
-        needle.style.left = `${score}%`;
-      }
-      if (scoreEl) scoreEl.textContent = `${score}%`;
+  // 5) TSLA drop: 0…–5% → 0–10 pts
+  if (tsla && typeof tsla.pct === 'number') {
+    const tslaScore = Math.min(Math.max(-tsla.pct, 0), 5) / 5 * 10;
+    score += tslaScore;
+    contributors.push(`TSLA ${tsla.pct.toFixed(2)}% → ${tslaScore.toFixed(1)}`);
+  }
 
-      let statusText = 'Normal';
-      if (score >= 70) statusText = 'High Risk';
-      else if (score >= 40) statusText = 'Elevated';
+  // 6) Lithium move: 0…±5% → 0–5 pts
+  if (lithium && typeof lithium.pct === 'number') {
+    const litScore = Math.min(Math.abs(lithium.pct), 5) / 5 * 5;
+    score += litScore;
+    contributors.push(`Lithium ${lithium.pct.toFixed(2)}% → ${litScore.toFixed(1)}`);
+  }
 
-      if (labelEl) {
-        labelEl.textContent = statusText;
-        labelEl.style.color = color;
-        labelEl.style.background = 'none';
-        labelEl.className = '';
-      }
-      if (detailsEl) { detailsEl.textContent = contributors.length ? contributors.join(', ') : 'No major stress signals'; }
-      if (updatedEl) updatedEl.textContent = 'Updated: ' + now.toLocaleTimeString();
+  // cap and log
+  score = Math.min(100, score);
+  console.log('[RiskTemp] contributors →', contributors, 'score →', score.toFixed(2));
 
-      const card = document.getElementById('card-risk-temp');
-      if (card) {
-        if (score >= 70) card.classList.add('alert'); else card.classList.remove('alert');
-      }
-    }
+  // draw gauge
+  const marker = document.getElementById('risk-temp-marker');
+  const needle  = document.getElementById('risk-temp-needle');
+  const labelEl = document.getElementById('risk-temp-status');
+  const scoreEl = document.getElementById('risk-temp-score');
+  const details = document.getElementById('risk-temp-details');
+  const updated = document.getElementById('risk-temp-updated');
+  const color   = riskColor(score);
+
+  if (marker) marker.style.left = `${score}%`, marker.style.background = color;
+  if (needle) needle.style.left = `${score}%`;
+  if (scoreEl) scoreEl.textContent = `${score.toFixed(1)}%`;
+
+  let statusText = 'Normal';
+  if (score >= 65)      statusText = 'High Risk';
+  else if (score >= 40) statusText = 'Caution';
+  else if (score >= 25) statusText = 'Elevated';
+
+  if (labelEl) {
+    labelEl.textContent = statusText;
+    labelEl.style.color   = color;
+    labelEl.style.background = 'none';
+  }
+  if (updated) updated.textContent = 'Updated: ' + now.toLocaleTimeString();
+
+  const card = document.getElementById('card-risk-temp');
+  if (card) {
+    if (score >= 70) card.classList.add('alert');
+    else card.classList.remove('alert');
+  }
+}
+
 
     function initDragReorder() {
       const grid = document.getElementById('dashboard-grid');
