@@ -1,3 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Market Warning Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+  <style>
+    :root { --bg:#1f212a; --card-bg:#2c2f40; --radius:18px; --shadow:0 25px 60px -15px rgba(0,0,0,0.6); --text-primary:rgba(255,255,255,0.92); --text-secondary:rgba(200,205,220,0.7); --live:#00d084; --cached:#6f7ea8; --error:#ff6f6f; --border:rgba(255,255,255,0.08); --transition:.35s cubic-bezier(.4,.2,.2,1);}
+    *{box-sizing:border-box;}
+    body{margin:0;padding:1.5rem 1rem 3rem;background:var(--bg);font-family:'Inter',system-ui,-apple-system,BlinkMacSystemFont,sans-serif;color:var(--text-primary);min-height:100vh;}
+    .app{max-width:1400px;margin:0 auto;display:flex;flex-direction:column;gap:1rem;}
+    .header{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:.5rem;padding:.75rem 1rem;}
+    .title{font-size:1.5rem;font-weight:700;display:flex;align-items:center;gap:.5rem;}
+    .sub{font-size:.85rem;color:var(--text-secondary);margin-top:2px;}
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:1rem;margin-top:.5rem;}
+    .card{position:relative;background:var(--card-bg);border-radius:var(--radius);padding:1.25rem 1rem 1.5rem;box-shadow:var(--shadow);display:flex;flex-direction:column;transition:transform var(--transition),box-shadow var(--transition);overflow:hidden;border:1px solid var(--border);}
+    .card.alert{box-shadow:0 0 25px 3px var(--error);}
+    .card:hover{transform:translateY(-2px);box-shadow:0 20px 50px -10px rgba(255,255,255,0.2);}
+    .small-label{font-size:.55rem;text-transform:uppercase;letter-spacing:1px;color:var(--text-secondary);margin-bottom:4px;}
+    h2{margin:0;font-size:.95rem;font-weight:600;letter-spacing:.5px;display:flex;justify-content:space-between;align-items:baseline;cursor:grab;}
+    .value{font-size:2.2rem;font-weight:700;margin-top:6px;display:flex;align-items:baseline;gap:6px;color:var(--text-primary);position:relative;}
+    .threshold-bar{position:absolute;left:0;right:0;top:50%;height:8px;border-radius:4px;transform:translateY(-50%);background:linear-gradient(90deg,#28c17d 0%,#ffcd3c 60%,#ff6f6f 100%);z-index:0;}
+    .threshold-inner{position:absolute;left:0;top:0;bottom:0;border-radius:4px;z-index:1;}
+    .threshold-label{margin-left:8px;font-size:.6rem;font-weight:600;letter-spacing:1px;}
+    .change{font-size:.85rem;margin-top:4px;display:flex;align-items:center;gap:4px;}
+    .up{color:var(--live);}
+    .down{color:var(--error);}
+    .badge{font-size:.55rem;padding:6px 12px;border-radius:999px;font-weight:600;display:inline-block;margin-left:6px;text-transform:uppercase;letter-spacing:.5px;background:rgba(255,255,255,0.08);color:var(--text-primary);}
+    .badge-live{background:var(--live);color:#fff;font-weight:700;border:1px solid rgba(255,255,255,0.1);}
+    .badge-cached{background:var(--cached);color:#fff;}
+    .badge-error{background:var(--error);color:#fff;}
+    .timestamp{font-size:.55rem;margin-top:6px;color:var(--text-secondary);}
+    .stale{font-size:.55rem;color:var(--text-secondary);margin-top:2px;}
+    .spinner{width:16px;height:16px;border:3px solid rgba(255,255,255,0.1);border-top:3px solid #8b9cff;border-radius:50%;animation:spin 1s linear infinite;display:inline-block;vertical-align:middle;margin-left:4px;}
+    @keyframes spin{to{transform:rotate(360deg);}}
+    .note{font-size:.55rem;color:var(--text-secondary);margin-top:6px;}
+    .mini{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:4px;}
+    .header-right{display:flex;gap:1rem;flex-wrap:wrap;font-size:.9rem;}
+    .legend{display:flex;gap:.75rem;align-items:center;}
+    .legend .badge{margin:0;}
+    .temp-bar{width:100%;height:14px;border-radius:7px;background:linear-gradient(90deg,#28c17d 0%,#ffcd3c 60%,#ff6f6f 100%);position:relative;overflow:hidden;margin-top:4px;}
+    .temp-marker{position:absolute;top:0;bottom:0;width:6px;border-radius:3px;transform:translateX(-50%);box-shadow:0 0 12px rgba(255,255,255,0.4);}
+    .temp-needle{position:absolute;top:0;bottom:0;width:2px;background:#fff;box-shadow:0 0 8px rgba(255,255,255,0.8);transform:translateX(-50%);pointer-events:none;z-index:2;}
+    .temp-label{margin-top:4px;font-size:.75rem;}
+    .sortable-ghost{opacity:.6;transform:scale(1.02);box-shadow:0 35px 80px -10px rgba(255,255,255,0.1);}
+    /* hide threshold bars on Buffett widgets as requested */
+    #card-buffett .threshold-bar,
+    #card-buffett .threshold-inner,
+    #card-estimated-buffett .threshold-bar,
+    #card-estimated-buffett .threshold-inner {
+      display:none;
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="header">
+      <div>
+        <div class="title">Market Warning Dashboard</div>
+        <div class="sub">Dark theme · Aggregated risk temperature · Live / Cached / Alerts</div>
+      </div>
+      <div class="header-right">
+        <div>Global updated: <strong id="global-updated">--:--:--</strong></div>
+        <div class="legend">
+          <div class="badge badge-live">LIVE</div>
+          <div class="badge badge-cached">CACHED</div>
+          <div class="badge badge-error">ERROR</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid" id="dashboard-grid">
+      <div class="card" data-widget="risk-temp" id="card-risk-temp">
+        <div class="small-label">Aggregate</div>
+        <h2>Risk Temperature</h2>
+        <div class="value" style="flex-direction:column;gap:4px;">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <div id="risk-temp-score" style="font-size:2rem;">--%</div>
+            <div id="risk-temp-status" class="badge" style="font-size:1.25rem;padding:4px 10px;background:none;">--</div>
+          </div>
+          <div class="temp-bar">
+            <div class="temp-needle" id="risk-temp-needle"></div>
+            <div class="temp-marker" id="risk-temp-marker" style="left:0;background:rgba(255,255,255,0.9);"></div>
+          </div>
+        </div>
+        <div class="temp-label" id="risk-temp-details">
+        Weighted aggregate score of all indicators
+        </div>
+
+        <div class="timestamp" id="risk-temp-updated">Updated: --</div>
+      </div>
+
+      <div class="card" data-widget="sp500" id="card-sp500">
+        <div class="small-label">Equity</div>
+        <h2>S&P 500 (SPY)</h2>
+        <div class="value" id="sp500">
+          -- <span id="sp500-spinner" class="spinner" style="display:none;"></span>
+        </div>
+        <div class="mini">
+          <div class="change" id="sp500-change"></div>
+          <div id="sp500-status" class="badge">--</div>
+        </div>
+        <div class="stale" id="sp500-stale" style="display:none;">Using cached value</div>
+        <div class="timestamp" id="sp500-updated">Updated: --</div>
+      </div>
+
+      <div class="card" data-widget="yield" id="card-yield">
+        <div class="small-label">Macro</div>
+        <h2>10Y − 2Y Yield Curve Spread</h2>
+        <div class="value" id="yield">
+          -- <span id="yield-spinner" class="spinner" style="display:none;"></span>
+        </div>
+        <div class="mini">
+          <div class="change" id="yield-change"></div>
+          <div id="yield-status" class="badge">--</div>
+        </div>
+        <div class="stale" id="yield-stale" style="display:none;">Using cached value</div>
+        <div class="timestamp" id="yield-updated">Updated: --</div>
+      </div>
+
+      <div class="card" data-widget="buffett" id="card-buffett">
+        <div class="small-label">Valuation</div>
+        <h2>Buffett Indicator</h2>
+        <div class="value" id="buffett-wrapper" style="position:relative;">
+          <div style="display:flex;align-items:center;gap:6px;width:100%;">
+            <div id="buffett">-- <span id="buffett-spinner" class="spinner" style="display:none;"></span></div>
+            <div class="threshold-label" id="buffett-label">--</div>
+          </div>
+        </div>
+        <div class="mini">
+          <div class="change" id="buffett-change"></div>
+          <div id="buffett-status" class="badge">--</div>
+        </div>
+        <div class="stale" id="buffett-stale" style="display:none;">Using cached value</div>
+        <div class="timestamp" id="buffett-updated">Updated: --</div>
+        <div class="note">Market cap / GDP. High readings signal overvaluation.</div>
+      </div>
+
+      <div class="card" data-widget="estimated-buffett" id="card-estimated-buffett">
+        <div class="small-label">Valuation</div>
+        <h2>Estimated Buffett (S&P scaled)</h2>
+        <div style="font-size:.6rem;margin-top:2px;">Approx: S&P 500 cap × 1.30 / GDP</div>
+        <div class="value" id="estimated-buffett-wrapper" style="position:relative;">
+          <div style="display:flex;align-items:center;gap:6px;width:100%;">
+            <div id="estimated-buffett">-- <span id="estimated-buffett-spinner" class="spinner" style="display:none;"></span></div>
+            <div class="threshold-label" id="estimated-buffett-label">--</div>
+          </div>
+        </div>
+        <div class="mini">
+          <div class="change" id="estimated-buffett-change"></div>
+          <div id="estimated-buffett-status" class="badge">--</div>
+        </div>
+        <div class="stale" id="estimated-buffett-stale" style="display:none;">Using cached value</div>
+        <div class="timestamp" id="estimated-buffett-updated">Updated: --</div>
+      </div>
+
+      <div class="card" data-widget="tsla" id="card-tsla">
+        <div class="small-label">Equity</div>
+        <h2>Tesla (TSLA)</h2>
+        <div class="value" id="tsla">
+          -- <span id="tsla-spinner" class="spinner" style="display:none;"></span>
+        </div>
+        <div class="mini">
+          <div class="change" id="tsla-change"></div>
+          <div id="tsla-status" class="badge">--</div>
+        </div>
+        <div class="stale" id="tsla-stale" style="display:none;">Using cached value</div>
+        <div class="timestamp" id="tsla-updated">Updated: --</div>
+      </div>
+
+      <div class="card" data-widget="lithium" id="card-lithium">
+        <div class="small-label">Commodity Proxy</div>
+        <h2>Lithium Spot Proxy (LIT ETF)</h2>
+        <div class="value" id="lithium">
+          -- <span id="lithium-spinner" class="spinner" style="display:none;"></span>
+        </div>
+        <div class="mini">
+          <div class="change" id="lithium-change"></div>
+          <div id="lithium-status" class="badge">--</div>
+        </div>
+        <div class="stale" id="lithium-stale" style="display:none;">Using cached value</div>
+        <div class="timestamp" id="lithium-updated">Updated: --</div>
+      </div>
+
+      <div class="card" data-widget="vixy" id="card-vixy">
+        <div class="small-label">Volatility</div>
+        <h2>VIXY</h2>
+        <div class="value" id="vix">
+          -- <span id="vix-spinner" class="spinner" style="display:none;"></span>
+        </div>
+        <div class="mini">
+          <div class="change" id="vix-change"></div>
+          <div id="vix-status" class="badge">--</div>
+        </div>
+        <div class="stale" id="vix-stale" style="display:none;">Using cached value</div>
+        <div class="timestamp" id="vix-updated">Updated: --</div>
+      </div>
+
+      <div class="card" data-widget="vixindex" id="card-vix-index">
+        <div class="small-label">Volatility</div>
+        <h2>VIX Index (^VIX)</h2>
+        <div class="value" id="vix-index">
+          -- <span id="vix-index-spinner" class="spinner" style="display:none;"></span>
+        </div>
+        <div class="mini">
+          <div class="change" id="vix-index-change"></div>
+          <div id="vix-index-status" class="badge">--</div>
+        </div>
+        <div class="stale" id="vix-index-stale" style="display:none;">Using cached value</div>
+        <div class="timestamp" id="vix-index-updated">Updated: --</div>
+      </div>
+    </div>
+
+    <div class="note">
+      Data sources: TwelveData for ETFs, Netlify functions for VIX index, yield spread, Estimated Buffett. Aggregated “Risk Temperature” mixes structural and near-term market stress.  
+      Rule: working widgets are isolated; new features only after verified.
+    </div>
+  </div>
+
 <script>
   const TWELVE_KEY = '26137bba624c4dcb9b5284ad1b234071';
 
@@ -150,8 +373,85 @@
     }
   }
 
+  // ──────────────────────────────────────────────────────────────
+  // VIX Index (^VIX) — fetch direct from function and render
+  // ──────────────────────────────────────────────────────────────
+  async function refreshVIXIndex() {
+    const spinner = document.getElementById('vix-index-spinner');
+    if (spinner) spinner.style.display = 'inline-block';
+
+    try {
+      const res = await fetch('/.netlify/functions/vixIndex?bust=' + Date.now());
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const json = await res.json();
+      if (json.error) throw new Error(json.error);
+
+      const price = Number(json.price);
+      const change = (json.changePercent == null || isNaN(Number(json.changePercent)))
+        ? null : Number(json.changePercent);
+      if (!Number.isFinite(price)) throw new Error('Bad price from vixIndex');
+
+      const valEl = document.getElementById('vix-index');
+      if (valEl) valEl.textContent = price.toFixed(2);
+
+      const changeEl = document.getElementById('vix-index-change');
+      if (changeEl) {
+        if (typeof change === 'number') {
+          changeEl.textContent = `${change >= 0 ? '▲' : '▼'} ${Math.abs(change).toFixed(2)}%`;
+          changeEl.className = 'change ' + (change >= 0 ? 'up' : 'down');
+        } else {
+          changeEl.textContent = '';
+          changeEl.className = 'change';
+        }
+      }
+
+      const tsEl = document.getElementById('vix-index-updated');
+      if (tsEl) tsEl.textContent = 'Updated: ' + new Date().toLocaleTimeString();
+
+      setStatus(document.getElementById('vix-index-status'), 'LIVE');
+
+      // cache it
+      cacheSet('vix-index', { price, change });
+    } catch (e) {
+      console.error('VIX Index error', e);
+      const c = cacheGet('vix-index');
+      if (c?.data) {
+        const { price, change } = c.data;
+        const valEl = document.getElementById('vix-index');
+        if (valEl) valEl.textContent = Number(price).toFixed(2);
+
+        const changeEl = document.getElementById('vix-index-change');
+        if (changeEl && typeof change === 'number') {
+          changeEl.textContent = `${change >= 0 ? '▲' : '▼'} ${Math.abs(change).toFixed(2)}%`;
+          changeEl.className = 'change ' + (change >= 0 ? 'up' : 'down');
+        } else if (changeEl) {
+          changeEl.textContent = '';
+          changeEl.className = 'change';
+        }
+
+        const tsEl = document.getElementById('vix-index-updated');
+        if (tsEl) tsEl.textContent = 'Updated: ' + new Date(c.ts).toLocaleTimeString() + ' (cached)';
+
+        setStatus(document.getElementById('vix-index-status'), 'CACHED');
+      } else {
+        const valEl = document.getElementById('vix-index');
+        if (valEl) valEl.textContent = 'Error';
+        setStatus(document.getElementById('vix-index-status'), 'ERROR');
+      }
+    } finally {
+      if (spinner) spinner.style.display = 'none';
+      if (typeof refreshRiskTemperature === 'function') refreshRiskTemperature();
+    }
+  }
+
   document.addEventListener('DOMContentLoaded', () => {
     refreshAllWidgets();
+    refreshVIXIndex();               // ← added
     setInterval(refreshAllWidgets, 120000);
+    setInterval(refreshVIXIndex, 120000); // ← added
   });
 </script>
+
+
+</body>
+</html>
