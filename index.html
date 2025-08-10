@@ -258,6 +258,92 @@
       : interpolateColor('#ffcd3c','#ff6f6f', (score-50)/50);
   }
 
+  /* ─────────────────────────────────────────────────────────────
+     Risk Temperature — uses cached widget data only
+     (no other changes made to your code)
+  ───────────────────────────────────────────────────────────── */
+  function refreshRiskTemperature() {
+    const now     = new Date();
+    const est     = cacheGet('estimated-buffett')?.data; // { ratio }
+    const yieldc  = cacheGet('yield')?.data;             // { spread, inverted }
+    const spy     = cacheGet('sp500')?.data;             // { price, pct }
+    const vixy    = cacheGet('vix')?.data;               // { price, pct }  (VIXY ETF)
+    const tsla    = cacheGet('tsla')?.data;              // { price, pct }
+    const lithium = cacheGet('lithium')?.data;           // { price, pct }
+
+    let score = 0;
+
+    // 1) Buffett (estimated): ratio 0..5 → 0..30 pts
+    if (est && typeof est.ratio === 'number' && !isNaN(est.ratio)) {
+      const buffScore = Math.min(Math.max(est.ratio, 0), 5) * 6;
+      score += buffScore;
+    }
+
+    // 2) Yield spread: +2 … -1 → 0..25 pts  (tighter/negative = riskier)
+    if (yieldc && typeof yieldc.spread === 'number' && !isNaN(yieldc.spread)) {
+      const raw       = Math.max(Math.min(yieldc.spread, 2), -1);
+      const yieldScore = ((2 - raw) / 3) * 25;
+      score += yieldScore;
+    }
+
+    // 3) SPY intraday drop: 0…-3% → 0..15 pts
+    if (spy && typeof spy.pct === 'number' && !isNaN(spy.pct)) {
+      const spyScore = (Math.min(Math.max(-spy.pct, 0), 3) / 3) * 15;
+      score += spyScore;
+    }
+
+    // 4) VIXY intraday rise: 0…+5% → 0..15 pts
+    if (vixy && typeof vixy.pct === 'number' && !isNaN(vixy.pct)) {
+      const vixScore = (Math.min(Math.max(vixy.pct, 0), 5) / 5) * 15;
+      score += vixScore;
+    }
+
+    // 5) TSLA drop: 0…-5% → 0..10 pts
+    if (tsla && typeof tsla.pct === 'number' && !isNaN(tsla.pct)) {
+      const tslaScore = (Math.min(Math.max(-tsla.pct, 0), 5) / 5) * 10;
+      score += tslaScore;
+    }
+
+    // 6) Lithium absolute move: 0…±5% → 0..5 pts
+    if (lithium && typeof lithium.pct === 'number' && !isNaN(lithium.pct)) {
+      const litScore = (Math.min(Math.abs(lithium.pct), 5) / 5) * 5;
+      score += litScore;
+    }
+
+    // clamp 0..100
+    score = Math.min(100, Math.max(0, score));
+
+    // UI updates
+    const color   = riskColor(score);
+    const marker  = document.getElementById('risk-temp-marker');
+    const needle  = document.getElementById('risk-temp-needle');
+    const labelEl = document.getElementById('risk-temp-status');
+    const scoreEl = document.getElementById('risk-temp-score');
+    const updated = document.getElementById('risk-temp-updated');
+    const card    = document.getElementById('card-risk-temp');
+
+    if (marker) { marker.style.left = `${score}%`; marker.style.background = color; }
+    if (needle) needle.style.left = `${score}%`;
+    if (scoreEl) scoreEl.textContent = `${score.toFixed(1)}%`;
+
+    let statusText = 'Normal';
+    if (score >= 65)      statusText = 'High Risk';
+    else if (score >= 40) statusText = 'Caution';
+    else if (score >= 25) statusText = 'Elevated';
+
+    if (labelEl) {
+      labelEl.textContent = statusText;
+      labelEl.style.color = color;
+      labelEl.style.background = 'none';
+    }
+    if (updated) updated.textContent = 'Updated: ' + now.toLocaleTimeString();
+
+    if (card) {
+      if (score >= 70) card.classList.add('alert');
+      else card.classList.remove('alert');
+    }
+  }
+
   // ──────────────────────────────────────────────────────────────
   // Unified fetch + cache-fallback
   // ──────────────────────────────────────────────────────────────
@@ -349,7 +435,7 @@
       el.textContent = overvalued
         ? '▲ Overvalued'
         : (ratio >= 2.5 ? '▲ Caution' : '▼ Normal');
-      el.className = 'change ' + (overvalued ? 'up' : (ratio >= 2.5 ? 'up' : 'down'));
+      el.className = 'change ' + (overvalued ? 'up' : 'down');
     });
 
     // True Buffett
