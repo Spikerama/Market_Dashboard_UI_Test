@@ -185,7 +185,38 @@
         <div class="stale" id="lithium-stale" style="display:none;">Using cached value</div>
         <div class="timestamp" id="lithium-updated">Updated: --</div>
       </div>
+      
+      <!-- GOLD -->
+<div class="card" data-widget="gold" id="card-gold">
+  <div class="small-label">Commodity</div>
+  <h2>Gold (USD/oz)</h2>
+  <div class="value" id="gold">
+    -- <span id="gold-spinner" class="spinner" style="display:none;"></span>
+  </div>
+  <div class="mini">
+    <div class="change" id="gold-change"></div>
+    <div id="gold-status" class="badge">--</div>
+  </div>
+  <div class="stale" id="gold-stale" style="display:none;">Using cached value</div>
+  <div class="timestamp" id="gold-updated">Updated: --</div>
+</div>
 
+<!-- DXY (Broad USD index) -->
+<div class="card" data-widget="dxy" id="card-dxy">
+  <div class="small-label">Currency</div>
+  <h2>USD Broad Index (FRED)</h2>
+  <div class="value" id="dxy">
+    -- <span id="dxy-spinner" class="spinner" style="display:none;"></span>
+  </div>
+  <div class="mini">
+    <div class="change" id="dxy-change"></div>
+    <div id="dxy-status" class="badge">--</div>
+  </div>
+  <div class="stale" id="dxy-stale" style="display:none;">Using cached value</div>
+  <div class="timestamp" id="dxy-updated">Updated: --</div>
+</div>
+
+      
       <div class="card" data-widget="vixy" id="card-vixy">
         <div class="small-label">Volatility</div>
         <h2>VIXY</h2>
@@ -256,113 +287,6 @@
     return score <= 50
       ? interpolateColor('#28c17d','#ffcd3c', score/50)
       : interpolateColor('#ffcd3c','#ff6f6f', (score-50)/50);
-  }
-
-  // ──────────────────────────────────────────────────────────────
-  // Risk Meter: always recompute from DOM (stable across devices)
-  // ──────────────────────────────────────────────────────────────
-  function ensureRiskGauge() {
-    const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
-    const getNum = (sel, stripPct=false) => {
-      const el = document.querySelector(sel);
-      if (!el) return NaN;
-      let t = (el.textContent || '').trim();
-      if (stripPct) t = t.replace('%','');
-      const m = t.match(/-?\d+(\.\d+)?/);
-      return m ? parseFloat(m[0]) : NaN;
-    };
-
-    // Read current rendered values
-    const vix = getNum('#vix-index');          // preferred
-    const vixy = getNum('#vix');               // fallback
-    const useVix = Number.isFinite(vix) ? vix : vixy;
-
-    const spread = getNum('#yield', true);     // e.g., 0.51 (already % units)
-    const buff   = getNum('#buffett', true);   // e.g., 195 (%)
-    const spyPct = getNum('#sp500-change', true);
-    const spyTxt = (document.getElementById('sp500-change')?.textContent || '');
-    const spySigned = /▼|−|-/.test(spyTxt) ? -Math.abs(spyPct) : Math.abs(spyPct);
-
-    // Normalize to [0..100] and weight
-    const wVix = 0.35, wYC = 0.25, wBuff = 0.30, wSP = 0.10;
-
-    let vixScore = 0;
-    if (Number.isFinite(useVix)) {
-      // 12 → 0 risk, 35 → 100 risk
-      const t = clamp((useVix - 12) / (35 - 12), 0, 1);
-      vixScore = t * 100 * wVix;
-    }
-
-    let ycScore = 0;
-    if (Number.isFinite(spread)) {
-      // +1.0% → 0, 0% → 50, -1.0% → 100
-      let t;
-      if (spread >= 1) t = 0;
-      else if (spread <= -1) t = 1;
-      else t = (1 - spread) / 2;
-      ycScore = clamp(t,0,1) * 100 * wYC;
-    }
-
-    let buffScore = 0;
-    if (Number.isFinite(buff)) {
-      // 120% → 0, 220% → 100
-      const t = clamp((buff - 120) / 100, 0, 1);
-      buffScore = t * 100 * wBuff;
-    }
-
-    let spScore = 0;
-    if (Number.isFinite(spySigned)) {
-      // -2% day → 100, +2% → 0
-      const t = clamp(-spySigned / 2, 0, 1);
-      spScore = t * 100 * wSP;
-    }
-
-    const score = clamp(vixScore + ycScore + buffScore + spScore, 0, 100);
-
-    // Label
-    const classify = (s)=>{
-      if (s >= 65) return 'High';
-      if (s >= 55) return 'Elevated';
-      if (s >= 40) return 'Watch';
-      if (s >= 25) return 'Normal';
-      return 'Calm';
-    };
-
-    // Render
-    const scoreEl = document.getElementById('risk-temp-score');
-    const labelEl = document.getElementById('risk-temp-status');
-    const needle  = document.getElementById('risk-temp-needle');
-    const detailsEl = document.getElementById('risk-temp-details');
-    const updEl   = document.getElementById('risk-temp-updated');
-    if (!scoreEl || !labelEl) return;
-
-    scoreEl.textContent = `${Math.round(score)}%`;
-    labelEl.textContent = classify(score);
-    labelEl.style.background = 'none';
-    labelEl.style.color = riskColor(score);
-    if (needle) needle.style.left = `${score}%`;
-
-    const bits = [];
-    if (Number.isFinite(useVix)) bits.push(`VIX ${useVix.toFixed(2)}`);
-    if (Number.isFinite(spread)) bits.push(`YC ${spread.toFixed(2)}%`);
-    if (Number.isFinite(buff))   bits.push(`Buffett ${buff.toFixed(0)}%`);
-    if (Number.isFinite(spySigned)) {
-      const arrow = spySigned >= 0 ? '+' : '';
-      bits.push(`S&P ${arrow}${spySigned.toFixed(2)}%`);
-    }
-    if (detailsEl) detailsEl.textContent = bits.join(' · ');
-    if (updEl) updEl.textContent = 'Updated: ' + new Date().toLocaleTimeString();
-  }
-
-  function safeRefreshRiskTemperature() {
-    try {
-      if (typeof refreshRiskTemperature === 'function') {
-        refreshRiskTemperature();
-      }
-    } catch (e) {
-      console.warn('refreshRiskTemperature() threw; using fallback:', e);
-    }
-    ensureRiskGauge(); // always recompute from current DOM
   }
 
   // ──────────────────────────────────────────────────────────────
@@ -443,6 +367,33 @@
         'Updated: ' + new Date().toLocaleTimeString();
     }
 
+    // Gold (FRED)
+    apply('gold', results.gold, ({ price, pct }) => {
+      document.getElementById('gold').textContent = price.toFixed(2);
+      const el = document.getElementById('gold-change');
+      if (typeof pct === 'number' && isFinite(pct)) {
+        el.textContent = `${pct >= 0 ? '▲' : '▼'} ${Math.abs(pct).toFixed(2)}%`;
+        el.className = 'change ' + (pct >= 0 ? 'up' : 'down');
+      } else {
+        el.textContent = '';
+        el.className = 'change';
+      }
+    });
+
+    // DXY / USD Broad Index (DTWEXBGS)
+    apply('dxy', results.dxy, ({ price, pct }) => {
+      document.getElementById('dxy').textContent = price.toFixed(2);
+      const el = document.getElementById('dxy-change');
+      if (typeof pct === 'number' && isFinite(pct)) {
+        el.textContent = `${pct >= 0 ? '▲' : '▼'} ${Math.abs(pct).toFixed(2)}%`;
+        el.className = 'change ' + (pct >= 0 ? 'up' : 'down');
+      } else {
+        el.textContent = '';
+        el.className = 'change';
+      }
+    });
+
+    // ──────────────────────────────────────────────────────────────
     // Guard against an empty {} for Estimated Buffett
     if (results.estimatedBuffett && typeof results.estimatedBuffett.ratio === 'undefined') {
       results.estimatedBuffett = { error: 'No data' };
@@ -473,8 +424,117 @@
       }
     });
 
-    // Recalc the aggregate gauge (fallback-safe)
-    safeRefreshRiskTemperature();
+    // Recalc the aggregate gauge
+    if (typeof refreshRiskTemperature === 'function') {
+      refreshRiskTemperature();
+    }
+  }
+
+  // ──────────────────────────────────────────────────────────────
+  // Risk Temperature (deterministic DOM-based)
+  // ──────────────────────────────────────────────────────────────
+  function refreshRiskTemperature() {
+    // helpers
+    const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+    const txt = id => (document.getElementById(id)?.textContent || '').trim();
+
+    // parse values from DOM
+    const vixVal = (() => {
+      const v = parseFloat(txt('vix-index'));
+      if (isFinite(v)) return v;
+      const alt = parseFloat(txt('vix'));
+      return isFinite(alt) ? alt : null;
+    })();
+
+    const ycSpread = (() => {
+      const t = txt('yield').replace('%','');
+      const v = parseFloat(t);
+      return isFinite(v) ? v : null;
+    })();
+
+    const buffettPct = (() => {
+      const t = txt('buffett').replace('%','');
+      const v = parseFloat(t);
+      return isFinite(v) ? v : null;
+    })();
+
+    const spyChangePct = (() => {
+      const t = txt('sp500-change');            // e.g., "▲ 0.20%" or "▼ 0.35%"
+      const m = t.match(/([▲▼])?\s*(-?\d+(?:\.\d+)?)%/);
+      if (!m) return null;
+      let v = parseFloat(m[2]);
+      if (t.includes('▼')) v *= -1;
+      return isFinite(v) ? v : null;
+    })();
+
+    // component scoring (0..100)
+    const vixScore = (v) => v == null ? null : clamp(((v - 12) / (35 - 12)) * 100, 0, 100);
+    const ycScore = (s) => {
+      if (s == null) return null;
+      if (s >= 0.5) return 5;
+      if (s >= 0)   return clamp((0.5 - s) / 0.5 * 50, 0, 50);
+      return clamp(50 + (Math.min(0, s) / -1.0) * 50, 50, 100);
+    };
+    const buffettScore = (p) => p == null ? null : clamp(((p - 120) / (250 - 120)) * 100, 0, 100);
+    const spyScore = (p) => {
+      if (p == null) return null;
+      const scaled = 50 - (p * 10); // -5% => 100, 0% => 50, +5% => 0
+      return clamp(scaled, 0, 100);
+    };
+
+    const parts = [];
+    const labels = [];
+
+    const vixS = vixScore(vixVal);
+    if (vixS != null) { parts.push({w: 0.35, s: vixS}); labels.push(`VIX ${vixVal.toFixed(2)}`); }
+
+    const ycS = ycScore(ycSpread);
+    if (ycS != null) { parts.push({w: 0.30, s: ycS}); labels.push(`YC ${ycSpread.toFixed(2)}%`); }
+
+    const bufS = buffettScore(buffettPct);
+    if (bufS != null) { parts.push({w: 0.25, s: bufS}); labels.push(`Buffett ${buffettPct.toFixed(0)}%`); }
+
+    const spyS = spyScore(spyChangePct);
+    if (spyS != null) { parts.push({w: 0.10, s: spyS}); labels.push(`S&P ${spyChangePct>=0?'+':''}${spyChangePct?.toFixed(2)}%`); }
+
+    if (parts.length === 0) {
+      const scoreEl = document.getElementById('risk-temp-score');
+      const statusEl = document.getElementById('risk-temp-status');
+      const detailsEl = document.getElementById('risk-temp-details');
+      const updEl = document.getElementById('risk-temp-updated');
+      if (scoreEl) scoreEl.textContent = '--%';
+      if (statusEl) statusEl.textContent = '--';
+      if (detailsEl) detailsEl.textContent = 'Waiting for signals…';
+      if (updEl) updEl.textContent = 'Updated: ' + new Date().toLocaleTimeString();
+      return;
+    }
+
+    const wsum = parts.reduce((a, b) => a + b.w, 0);
+    const score = parts.reduce((a, b) => a + b.s * (b.w / wsum), 0);
+    const scorePct = Math.round(score);
+
+    let bucket = 'Calm';
+    if (scorePct >= 75) bucket = 'Alert';
+    else if (scorePct >= 50) bucket = 'Watch';
+    else if (scorePct >= 25) bucket = 'Elevated';
+
+    const scoreEl = document.getElementById('risk-temp-score');
+    const statusEl = document.getElementById('risk-temp-status');
+    const needleEl = document.getElementById('risk-temp-needle');
+    const markerEl = document.getElementById('risk-temp-marker');
+    const detailsEl = document.getElementById('risk-temp-details');
+    const updEl = document.getElementById('risk-temp-updated');
+
+    if (scoreEl) scoreEl.textContent = `${scorePct}%`;
+    if (statusEl) {
+      statusEl.textContent = bucket;
+      statusEl.style.background = 'none';
+      statusEl.style.color = riskColor(scorePct);
+    }
+    if (needleEl) needleEl.style.left = `${scorePct}%`;
+    if (markerEl) markerEl.style.left = `${scorePct}%`;
+    if (detailsEl) detailsEl.textContent = labels.join(' · ');
+    if (updEl) updEl.textContent = 'Updated: ' + new Date().toLocaleTimeString();
   }
 
   // ──────────────────────────────────────────────────────────────
@@ -514,6 +574,7 @@
 
       setStatus(document.getElementById('vix-index-status'), 'LIVE');
 
+      // cache it
       cacheSet('vix-index', { price, change });
     } catch (e) {
       console.error('VIX Index error', e);
@@ -543,8 +604,7 @@
       }
     } finally {
       if (spinner) spinner.style.display = 'none';
-      // Recompute risk meter after VIX updates
-      safeRefreshRiskTemperature();
+      if (typeof refreshRiskTemperature === 'function') refreshRiskTemperature();
     }
   }
 
@@ -553,8 +613,6 @@
     refreshVIXIndex();
     setInterval(refreshAllWidgets, 120000);
     setInterval(refreshVIXIndex, 120000);
-    // periodic sanity refresh of gauge in case of late updates
-    setInterval(safeRefreshRiskTemperature, 30000);
   });
 </script>
 
