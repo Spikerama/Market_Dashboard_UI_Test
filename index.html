@@ -339,14 +339,6 @@
       el.className = 'change ' + (pct >= 0 ? 'up' : 'down');
     });
 
-    // VIXY
-    apply('vix', results.vixy, ({ price, pct }) => {
-      document.getElementById('vix').textContent = price.toFixed(2);
-      const el = document.getElementById('vix-change');
-      el.textContent = `${pct >= 0 ? '▲' : '▼'} ${Math.abs(pct).toFixed(2)}%`;
-      el.className = 'change ' + (pct >= 0 ? 'up' : 'down');
-    });
-
     // Lithium ETF
     apply('lithium', results.lit, ({ price, pct }) => {
       document.getElementById('lithium').textContent = price.toFixed(2);
@@ -367,47 +359,11 @@
         'Updated: ' + new Date().toLocaleTimeString();
     }
 
-    // Gold (FRED)
-    apply('gold', results.gold, ({ price, pct }) => {
-      document.getElementById('gold').textContent = price.toFixed(2);
-      const el = document.getElementById('gold-change');
-      if (typeof pct === 'number' && isFinite(pct)) {
-        el.textContent = `${pct >= 0 ? '▲' : '▼'} ${Math.abs(pct).toFixed(2)}%`;
-        el.className = 'change ' + (pct >= 0 ? 'up' : 'down');
-      } else {
-        el.textContent = '';
-        el.className = 'change';
-      }
-    });
-
-    // DXY / USD Broad Index (DTWEXBGS)
-    apply('dxy', results.dxy, ({ price, pct }) => {
-      document.getElementById('dxy').textContent = price.toFixed(2);
-      const el = document.getElementById('dxy-change');
-      if (typeof pct === 'number' && isFinite(pct)) {
-        el.textContent = `${pct >= 0 ? '▲' : '▼'} ${Math.abs(pct).toFixed(2)}%`;
-        el.className = 'change ' + (pct >= 0 ? 'up' : 'down');
-      } else {
-        el.textContent = '';
-        el.className = 'change';
-      }
-    });
-
     // ──────────────────────────────────────────────────────────────
     // Guard against an empty {} for Estimated Buffett
     if (results.estimatedBuffett && typeof results.estimatedBuffett.ratio === 'undefined') {
       results.estimatedBuffett = { error: 'No data' };
     }
-
-    // Estimated Buffett
-    apply('estimated-buffett', results.estimatedBuffett, ({ ratio, overvalued }) => {
-      document.getElementById('estimated-buffett').textContent = `${ratio.toFixed(2)}%`;
-      const el = document.getElementById('estimated-buffett-change');
-      el.textContent = overvalued
-        ? '▲ Overvalued'
-        : (ratio >= 2.5 ? '▲ Caution' : '▼ Normal');
-      el.className = 'change ' + (overvalued ? 'up' : (ratio >= 2.5 ? 'up' : 'down'));
-    });
 
     // True Buffett
     apply('buffett', results.buffett, ({ ratio }) => {
@@ -423,6 +379,32 @@
         statusEl.classList.remove('badge-error');
       }
     });
+    
+    // GOLD
+apply('gold', results.gold, ({ price, pct }) => {
+  document.getElementById('gold').textContent = Number(price).toFixed(2);
+  const el = document.getElementById('gold-change');
+  if (typeof pct === 'number' && isFinite(pct)) {
+    el.textContent = `${pct >= 0 ? '▲' : '▼'} ${Math.abs(pct).toFixed(2)}%`;
+    el.className = 'change ' + (pct >= 0 ? 'up' : 'down');
+  } else {
+    el.textContent = '';
+    el.className = 'change';
+  }
+});
+
+// DXY
+apply('dxy', results.dxy, ({ price, pct }) => {
+  document.getElementById('dxy').textContent = Number(price).toFixed(2);
+  const el = document.getElementById('dxy-change');
+  if (typeof pct === 'number' && isFinite(pct)) {
+    el.textContent = `${pct >= 0 ? '▲' : '▼'} ${Math.abs(pct).toFixed(2)}%`;
+    el.className = 'change ' + (pct >= 0 ? 'up' : 'down');
+  } else {
+    el.textContent = '';
+    el.className = 'change';
+  }
+});
 
     // Recalc the aggregate gauge
     if (typeof refreshRiskTemperature === 'function') {
@@ -431,110 +413,108 @@
   }
 
   // ──────────────────────────────────────────────────────────────
-  // Risk Temperature (deterministic DOM-based)
+  // Risk Temperature (now supports pct OR changePercent/change)
   // ──────────────────────────────────────────────────────────────
   function refreshRiskTemperature() {
-    // helpers
-    const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
-    const txt = id => (document.getElementById(id)?.textContent || '').trim();
+    const scoreEl   = document.getElementById('risk-temp-score');
+    const statusEl  = document.getElementById('risk-temp-status');
+    const needleEl  = document.getElementById('risk-temp-needle');
+    const detailsEl = document.getElementById('risk-temp-details');
+    const updatedEl = document.getElementById('risk-temp-updated');
 
-    // parse values from DOM
-    const vixVal = (() => {
-      const v = parseFloat(txt('vix-index'));
-      if (isFinite(v)) return v;
-      const alt = parseFloat(txt('vix'));
-      return isFinite(alt) ? alt : null;
-    })();
+    const clamp = (v, lo=0, hi=100) => Math.max(lo, Math.min(hi, v));
 
-    const ycSpread = (() => {
-      const t = txt('yield').replace('%','');
-      const v = parseFloat(t);
-      return isFinite(v) ? v : null;
-    })();
-
-    const buffettPct = (() => {
-      const t = txt('buffett').replace('%','');
-      const v = parseFloat(t);
-      return isFinite(v) ? v : null;
-    })();
-
-    const spyChangePct = (() => {
-      const t = txt('sp500-change');            // e.g., "▲ 0.20%" or "▼ 0.35%"
-      const m = t.match(/([▲▼])?\s*(-?\d+(?:\.\d+)?)%/);
-      if (!m) return null;
-      let v = parseFloat(m[2]);
-      if (t.includes('▼')) v *= -1;
-      return isFinite(v) ? v : null;
-    })();
-
-    // component scoring (0..100)
-    const vixScore = (v) => v == null ? null : clamp(((v - 12) / (35 - 12)) * 100, 0, 100);
-    const ycScore = (s) => {
-      if (s == null) return null;
-      if (s >= 0.5) return 5;
-      if (s >= 0)   return clamp((0.5 - s) / 0.5 * 50, 0, 50);
-      return clamp(50 + (Math.min(0, s) / -1.0) * 50, 50, 100);
-    };
-    const buffettScore = (p) => p == null ? null : clamp(((p - 120) / (250 - 120)) * 100, 0, 100);
-    const spyScore = (p) => {
-      if (p == null) return null;
-      const scaled = 50 - (p * 10); // -5% => 100, 0% => 50, +5% => 0
-      return clamp(scaled, 0, 100);
+    // read a % change from cache with fallbacks: pct → changePercent → change
+    const readPct = (key) => {
+      const d = cacheGet(key)?.data;
+      if (!d) return null;
+      for (const k of ['pct','changePercent','change']) {
+        const v = d[k];
+        if (typeof v === 'number' && isFinite(v)) return v;
+      }
+      return null;
     };
 
     const parts = [];
-    const labels = [];
 
-    const vixS = vixScore(vixVal);
-    if (vixS != null) { parts.push({w: 0.35, s: vixS}); labels.push(`VIX ${vixVal.toFixed(2)}`); }
+    // S&P 500 (SPY) daily % change → risk score (down = more risk)
+    const spyPct = readPct('sp500');
+    if (spyPct !== null) {
+      const s = clamp(50 - 12 * spyPct); // +1% -> -12pts (safer), -1% -> +12pts (riskier)
+      parts.push({ label: `S&P ${spyPct >= 0 ? '+' : ''}${spyPct.toFixed(2)}%`, score: s, weight: 0.20 });
+    }
 
-    const ycS = ycScore(ycSpread);
-    if (ycS != null) { parts.push({w: 0.30, s: ycS}); labels.push(`YC ${ycSpread.toFixed(2)}%`); }
+    // VIX index (prefer level; fallback to % change if that’s all we have)
+    const vixLevel = cacheGet('vix-index')?.data?.price;
+    const vixChg   = readPct('vix-index');
+    if (typeof vixLevel === 'number' && isFinite(vixLevel)) {
+      // Rough map: 12→~20, 20→~50, 30→~80, 40→~95
+      const s = clamp(20 + (vixLevel - 12) * 3);
+      parts.push({ label: `VIX ${vixLevel.toFixed(2)}`, score: s, weight: 0.25 });
+    } else if (vixChg !== null) {
+      const s = clamp(50 + (vixChg * 4)); // +1% VIX ≈ +4 risk pts
+      parts.push({ label: `VIX ${vixChg >= 0 ? '+' : ''}${Math.abs(vixChg).toFixed(2)}%`, score: s, weight: 0.15 });
+    }
 
-    const bufS = buffettScore(buffettPct);
-    if (bufS != null) { parts.push({w: 0.25, s: bufS}); labels.push(`Buffett ${buffettPct.toFixed(0)}%`); }
+    // Yield curve spread (10y-2y): inversion = riskier
+    const yc = cacheGet('yield')?.data?.spread;
+    if (typeof yc === 'number' && isFinite(yc)) {
+      const s = yc < 0
+        ? clamp(70 + Math.min(30, Math.abs(yc) * 25)) // deeper inversion -> higher risk
+        : clamp(40 - Math.min(25, yc * 20));          // steeper positive -> safer
+      parts.push({ label: `YC ${yc.toFixed(2)}%`, score: s, weight: 0.20 });
+    }
 
-    const spyS = spyScore(spyChangePct);
-    if (spyS != null) { parts.push({w: 0.10, s: spyS}); labels.push(`S&P ${spyChangePct>=0?'+':''}${spyChangePct?.toFixed(2)}%`); }
+    // Buffett ratio (% of GDP)
+    const buff = cacheGet('buffett')?.data?.ratio;
+    if (typeof buff === 'number' && isFinite(buff)) {
+      // 120% -> ~0 risk, 200% -> ~56, 240% -> ~84, 260% -> ~98
+      const s = clamp((buff - 120) * 0.7);
+      parts.push({ label: `Buffett ${buff.toFixed(0)}%`, score: s, weight: 0.20 });
+    }
 
-    if (parts.length === 0) {
-      const scoreEl = document.getElementById('risk-temp-score');
-      const statusEl = document.getElementById('risk-temp-status');
-      const detailsEl = document.getElementById('risk-temp-details');
-      const updEl = document.getElementById('risk-temp-updated');
-      if (scoreEl) scoreEl.textContent = '--%';
-      if (statusEl) statusEl.textContent = '--';
-      if (detailsEl) detailsEl.textContent = 'Waiting for signals…';
-      if (updEl) updEl.textContent = 'Updated: ' + new Date().toLocaleTimeString();
+    // Gold % change (up = flight to safety → riskier)
+    const goldPct = readPct('gold');
+    if (goldPct !== null) {
+      const s = clamp(50 + goldPct * 10); // +1% gold ≈ +10 risk pts
+      parts.push({ label: `Gold ${goldPct >= 0 ? '+' : ''}${goldPct.toFixed(2)}%`, score: s, weight: 0.075 });
+    }
+
+    // DXY % change (strong USD = tighter conditions → riskier)
+    const dxyPct = readPct('dxy');
+    if (dxyPct !== null) {
+      const s = clamp(50 + dxyPct * 10); // +1% DXY ≈ +10 risk pts
+      parts.push({ label: `DXY ${dxyPct >= 0 ? '+' : ''}${dxyPct.toFixed(2)}%`, score: s, weight: 0.075 });
+    }
+
+    // nothing available yet
+    if (!parts.length) {
+      if (scoreEl)   scoreEl.textContent = '--%';
+      if (statusEl)  statusEl.textContent = '--';
+      if (detailsEl) detailsEl.textContent = 'Waiting for data...';
+      if (needleEl)  needleEl.style.left = '0%';
       return;
     }
 
-    const wsum = parts.reduce((a, b) => a + b.w, 0);
-    const score = parts.reduce((a, b) => a + b.s * (b.w / wsum), 0);
-    const scorePct = Math.round(score);
+    // normalize weights in case some parts are missing
+    const wsum  = parts.reduce((a, p) => a + p.weight, 0) || 1;
+    const score = Math.round(parts.reduce((a, p) => a + p.score * p.weight, 0) / wsum);
 
-    let bucket = 'Calm';
-    if (scorePct >= 75) bucket = 'Alert';
-    else if (scorePct >= 50) bucket = 'Watch';
-    else if (scorePct >= 25) bucket = 'Elevated';
+    // label bands
+    let band = 'Calm';
+    if (score >= 75) band = 'Alert';
+    else if (score >= 50) band = 'Elevated';
+    else if (score >= 25) band = 'Watch';
 
-    const scoreEl = document.getElementById('risk-temp-score');
-    const statusEl = document.getElementById('risk-temp-status');
-    const needleEl = document.getElementById('risk-temp-needle');
-    const markerEl = document.getElementById('risk-temp-marker');
-    const detailsEl = document.getElementById('risk-temp-details');
-    const updEl = document.getElementById('risk-temp-updated');
-
-    if (scoreEl) scoreEl.textContent = `${scorePct}%`;
+    // write UI
+    if (scoreEl)  scoreEl.textContent = `${score}%`;
     if (statusEl) {
-      statusEl.textContent = bucket;
-      statusEl.style.background = 'none';
-      statusEl.style.color = riskColor(scorePct);
+      statusEl.textContent = band;
+      statusEl.style.color = riskColor(score);
     }
-    if (needleEl) needleEl.style.left = `${scorePct}%`;
-    if (markerEl) markerEl.style.left = `${scorePct}%`;
-    if (detailsEl) detailsEl.textContent = labels.join(' · ');
-    if (updEl) updEl.textContent = 'Updated: ' + new Date().toLocaleTimeString();
+    if (needleEl)  needleEl.style.left = `${score}%`;
+    if (detailsEl) detailsEl.textContent = parts.map(p => p.label).join(' · ');
+    if (updatedEl) updatedEl.textContent = 'Updated: ' + new Date().toLocaleTimeString();
   }
 
   // ──────────────────────────────────────────────────────────────
@@ -615,7 +595,6 @@
     setInterval(refreshVIXIndex, 120000);
   });
 </script>
-
 
 </body>
 </html>
