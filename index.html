@@ -140,24 +140,6 @@
         <div class="note">Market cap / GDP. High readings signal overvaluation.</div>
       </div>
 
-      <div class="card" data-widget="estimated-buffett" id="card-estimated-buffett">
-        <div class="small-label">Valuation</div>
-        <h2>Estimated Buffett (S&P scaled)</h2>
-        <div style="font-size:.6rem;margin-top:2px;">Approx: S&P 500 cap × 1.30 / GDP</div>
-        <div class="value" id="estimated-buffett-wrapper" style="position:relative;">
-          <div style="display:flex;align-items:center;gap:6px;width:100%;">
-            <div id="estimated-buffett">-- <span id="estimated-buffett-spinner" class="spinner" style="display:none;"></span></div>
-            <div class="threshold-label" id="estimated-buffett-label">--</div>
-          </div>
-        </div>
-        <div class="mini">
-          <div class="change" id="estimated-buffett-change"></div>
-          <div id="estimated-buffett-status" class="badge">--</div>
-        </div>
-        <div class="stale" id="estimated-buffett-stale" style="display:none;">Using cached value</div>
-        <div class="timestamp" id="estimated-buffett-updated">Updated: --</div>
-      </div>
-
       <div class="card" data-widget="tsla" id="card-tsla">
         <div class="small-label">Equity</div>
         <h2>Tesla (TSLA)</h2>
@@ -187,48 +169,33 @@
       </div>
       
       <!-- GOLD -->
-<div class="card" data-widget="gold" id="card-gold">
-  <div class="small-label">Commodity</div>
-  <h2>Gold (USD/oz)</h2>
-  <div class="value" id="gold">
-    -- <span id="gold-spinner" class="spinner" style="display:none;"></span>
-  </div>
-  <div class="mini">
-    <div class="change" id="gold-change"></div>
-    <div id="gold-status" class="badge">--</div>
-  </div>
-  <div class="stale" id="gold-stale" style="display:none;">Using cached value</div>
-  <div class="timestamp" id="gold-updated">Updated: --</div>
-</div>
-
-<!-- DXY (Broad USD index) -->
-<div class="card" data-widget="dxy" id="card-dxy">
-  <div class="small-label">Currency</div>
-  <h2>USD Broad Index (FRED)</h2>
-  <div class="value" id="dxy">
-    -- <span id="dxy-spinner" class="spinner" style="display:none;"></span>
-  </div>
-  <div class="mini">
-    <div class="change" id="dxy-change"></div>
-    <div id="dxy-status" class="badge">--</div>
-  </div>
-  <div class="stale" id="dxy-stale" style="display:none;">Using cached value</div>
-  <div class="timestamp" id="dxy-updated">Updated: --</div>
-</div>
-
-      
-      <div class="card" data-widget="vixy" id="card-vixy">
-        <div class="small-label">Volatility</div>
-        <h2>VIXY</h2>
-        <div class="value" id="vix">
-          -- <span id="vix-spinner" class="spinner" style="display:none;"></span>
+      <div class="card" data-widget="gold" id="card-gold">
+        <div class="small-label">Commodity</div>
+        <h2>Gold (USD/oz)</h2>
+        <div class="value" id="gold">
+          -- <span id="gold-spinner" class="spinner" style="display:none;"></span>
         </div>
         <div class="mini">
-          <div class="change" id="vix-change"></div>
-          <div id="vix-status" class="badge">--</div>
+          <div class="change" id="gold-change"></div>
+          <div id="gold-status" class="badge">--</div>
         </div>
-        <div class="stale" id="vix-stale" style="display:none;">Using cached value</div>
-        <div class="timestamp" id="vix-updated">Updated: --</div>
+        <div class="stale" id="gold-stale" style="display:none;">Using cached value</div>
+        <div class="timestamp" id="gold-updated">Updated: --</div>
+      </div>
+
+      <!-- DXY (Broad USD index) -->
+      <div class="card" data-widget="dxy" id="card-dxy">
+        <div class="small-label">Currency</div>
+        <h2>USD Broad Index (FRED)</h2>
+        <div class="value" id="dxy">
+          -- <span id="dxy-spinner" class="spinner" style="display:none;"></span>
+        </div>
+        <div class="mini">
+          <div class="change" id="dxy-change"></div>
+          <div id="dxy-status" class="badge">--</div>
+        </div>
+        <div class="stale" id="dxy-stale" style="display:none;">Using cached value</div>
+        <div class="timestamp" id="dxy-updated">Updated: --</div>
       </div>
 
       <div class="card" data-widget="vixindex" id="card-vix-index">
@@ -359,12 +326,6 @@
         'Updated: ' + new Date().toLocaleTimeString();
     }
 
-    // ──────────────────────────────────────────────────────────────
-    // Guard against an empty {} for Estimated Buffett
-    if (results.estimatedBuffett && typeof results.estimatedBuffett.ratio === 'undefined') {
-      results.estimatedBuffett = { error: 'No data' };
-    }
-
     // True Buffett
     apply('buffett', results.buffett, ({ ratio }) => {
       document.getElementById('buffett').textContent = `${ratio.toFixed(2)}%`;
@@ -379,32 +340,32 @@
         statusEl.classList.remove('badge-error');
       }
     });
-    
-    // GOLD
-apply('gold', results.gold, ({ price, pct }) => {
-  document.getElementById('gold').textContent = Number(price).toFixed(2);
-  const el = document.getElementById('gold-change');
-  if (typeof pct === 'number' && isFinite(pct)) {
-    el.textContent = `${pct >= 0 ? '▲' : '▼'} ${Math.abs(pct).toFixed(2)}%`;
-    el.className = 'change ' + (pct >= 0 ? 'up' : 'down');
-  } else {
-    el.textContent = '';
-    el.className = 'change';
-  }
-});
 
-// DXY
-apply('dxy', results.dxy, ({ price, pct }) => {
-  document.getElementById('dxy').textContent = Number(price).toFixed(2);
-  const el = document.getElementById('dxy-change');
-  if (typeof pct === 'number' && isFinite(pct)) {
-    el.textContent = `${pct >= 0 ? '▲' : '▼'} ${Math.abs(pct).toFixed(2)}%`;
-    el.className = 'change ' + (pct >= 0 ? 'up' : 'down');
-  } else {
-    el.textContent = '';
-    el.className = 'change';
-  }
-});
+    // GOLD
+    apply('gold', results.gold, ({ price, pct }) => {
+      document.getElementById('gold').textContent = Number(price).toFixed(2);
+      const el = document.getElementById('gold-change');
+      if (typeof pct === 'number') {
+        el.textContent = `${pct >= 0 ? '▲' : '▼'} ${Math.abs(pct).toFixed(2)}%`;
+        el.className = 'change ' + (pct >= 0 ? 'up' : 'down');
+      } else {
+        el.textContent = '';
+        el.className = 'change';
+      }
+    });
+
+    // DXY
+    apply('dxy', results.dxy, ({ price, pct }) => {
+      document.getElementById('dxy').textContent = Number(price).toFixed(2);
+      const el = document.getElementById('dxy-change');
+      if (typeof pct === 'number') {
+        el.textContent = `${pct >= 0 ? '▲' : '▼'} ${Math.abs(pct).toFixed(2)}%`;
+        el.className = 'change ' + (pct >= 0 ? 'up' : 'down');
+      } else {
+        el.textContent = '';
+        el.className = 'change';
+      }
+    });
 
     // Recalc the aggregate gauge
     if (typeof refreshRiskTemperature === 'function') {
@@ -440,7 +401,7 @@ apply('dxy', results.dxy, ({ price, pct }) => {
     // S&P 500 (SPY) daily % change → risk score (down = more risk)
     const spyPct = readPct('sp500');
     if (spyPct !== null) {
-      const s = clamp(50 - 12 * spyPct); // +1% -> -12pts (safer), -1% -> +12pts (riskier)
+      const s = clamp(50 - 12 * spyPct);
       parts.push({ label: `S&P ${spyPct >= 0 ? '+' : ''}${spyPct.toFixed(2)}%`, score: s, weight: 0.20 });
     }
 
@@ -448,46 +409,43 @@ apply('dxy', results.dxy, ({ price, pct }) => {
     const vixLevel = cacheGet('vix-index')?.data?.price;
     const vixChg   = readPct('vix-index');
     if (typeof vixLevel === 'number' && isFinite(vixLevel)) {
-      // Rough map: 12→~20, 20→~50, 30→~80, 40→~95
       const s = clamp(20 + (vixLevel - 12) * 3);
       parts.push({ label: `VIX ${vixLevel.toFixed(2)}`, score: s, weight: 0.25 });
     } else if (vixChg !== null) {
-      const s = clamp(50 + (vixChg * 4)); // +1% VIX ≈ +4 risk pts
+      const s = clamp(50 + (vixChg * 4));
       parts.push({ label: `VIX ${vixChg >= 0 ? '+' : ''}${Math.abs(vixChg).toFixed(2)}%`, score: s, weight: 0.15 });
     }
 
-    // Yield curve spread (10y-2y): inversion = riskier
+    // Yield curve spread (10y-2y)
     const yc = cacheGet('yield')?.data?.spread;
     if (typeof yc === 'number' && isFinite(yc)) {
       const s = yc < 0
-        ? clamp(70 + Math.min(30, Math.abs(yc) * 25)) // deeper inversion -> higher risk
-        : clamp(40 - Math.min(25, yc * 20));          // steeper positive -> safer
+        ? clamp(70 + Math.min(30, Math.abs(yc) * 25))
+        : clamp(40 - Math.min(25, yc * 20));
       parts.push({ label: `YC ${yc.toFixed(2)}%`, score: s, weight: 0.20 });
     }
 
-    // Buffett ratio (% of GDP)
+    // Buffett ratio
     const buff = cacheGet('buffett')?.data?.ratio;
     if (typeof buff === 'number' && isFinite(buff)) {
-      // 120% -> ~0 risk, 200% -> ~56, 240% -> ~84, 260% -> ~98
       const s = clamp((buff - 120) * 0.7);
       parts.push({ label: `Buffett ${buff.toFixed(0)}%`, score: s, weight: 0.20 });
     }
 
-    // Gold % change (up = flight to safety → riskier)
+    // Gold % change
     const goldPct = readPct('gold');
     if (goldPct !== null) {
-      const s = clamp(50 + goldPct * 10); // +1% gold ≈ +10 risk pts
+      const s = clamp(50 + goldPct * 10);
       parts.push({ label: `Gold ${goldPct >= 0 ? '+' : ''}${goldPct.toFixed(2)}%`, score: s, weight: 0.075 });
     }
 
-    // DXY % change (strong USD = tighter conditions → riskier)
+    // DXY % change
     const dxyPct = readPct('dxy');
     if (dxyPct !== null) {
-      const s = clamp(50 + dxyPct * 10); // +1% DXY ≈ +10 risk pts
+      const s = clamp(50 + dxyPct * 10);
       parts.push({ label: `DXY ${dxyPct >= 0 ? '+' : ''}${dxyPct.toFixed(2)}%`, score: s, weight: 0.075 });
     }
 
-    // nothing available yet
     if (!parts.length) {
       if (scoreEl)   scoreEl.textContent = '--%';
       if (statusEl)  statusEl.textContent = '--';
@@ -496,17 +454,14 @@ apply('dxy', results.dxy, ({ price, pct }) => {
       return;
     }
 
-    // normalize weights in case some parts are missing
     const wsum  = parts.reduce((a, p) => a + p.weight, 0) || 1;
     const score = Math.round(parts.reduce((a, p) => a + p.score * p.weight, 0) / wsum);
 
-    // label bands
     let band = 'Calm';
     if (score >= 75) band = 'Alert';
     else if (score >= 50) band = 'Elevated';
     else if (score >= 25) band = 'Watch';
 
-    // write UI
     if (scoreEl)  scoreEl.textContent = `${score}%`;
     if (statusEl) {
       statusEl.textContent = band;
@@ -554,7 +509,6 @@ apply('dxy', results.dxy, ({ price, pct }) => {
 
       setStatus(document.getElementById('vix-index-status'), 'LIVE');
 
-      // cache it
       cacheSet('vix-index', { price, change });
     } catch (e) {
       console.error('VIX Index error', e);
