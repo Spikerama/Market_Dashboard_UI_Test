@@ -47,13 +47,7 @@
     .temp-needle{position:absolute;top:0;bottom:0;width:2px;background:#fff;box-shadow:0 0 8px rgba(255,255,255,0.8);transform:translateX(-50%);pointer-events:none;z-index:2;}
     .temp-label{margin-top:4px;font-size:.75rem;}
     .sortable-ghost{opacity:.6;transform:scale(1.02);box-shadow:0 35px 80px -10px rgba(255,255,255,0.1);}
-    /* hide threshold bars on Buffett widgets as requested */
-    #card-buffett .threshold-bar,
-    #card-buffett .threshold-inner,
-    #card-estimated-buffett .threshold-bar,
-    #card-estimated-buffett .threshold-inner {
-      display:none;
-    }
+    #card-buffett .threshold-bar, #card-buffett .threshold-inner { display:none; }
   </style>
 </head>
 <body>
@@ -87,10 +81,7 @@
             <div class="temp-marker" id="risk-temp-marker" style="left:0;background:rgba(255,255,255,0.9);"></div>
           </div>
         </div>
-        <div class="temp-label" id="risk-temp-details">
-        Weighted aggregate score of all indicators
-        </div>
-
+        <div class="temp-label" id="risk-temp-details">Weighted aggregate score of all indicators</div>
         <div class="timestamp" id="risk-temp-updated">Updated: --</div>
       </div>
 
@@ -167,7 +158,7 @@
         <div class="stale" id="lithium-stale" style="display:none;">Using cached value</div>
         <div class="timestamp" id="lithium-updated">Updated: --</div>
       </div>
-      
+
       <!-- GOLD -->
       <div class="card" data-widget="gold" id="card-gold">
         <div class="small-label">Commodity</div>
@@ -214,7 +205,8 @@
     </div>
 
     <div class="note">
-      Data sources: TwelveData for ETFs, Netlify functions for VIX index, yield spread, Estimated Buffett. Aggregated “Risk Temperature” mixes structural and near-term market stress.  
+      Data sources: TwelveData for ETFs, Netlify functions for VIX index, yield spread, Buffett; FRED for Gold & DXY.
+      Aggregated “Risk Temperature” mixes structural and near-term market stress.  
       Rule: working widgets are isolated; new features only after verified.
     </div>
   </div>
@@ -223,20 +215,18 @@
   const TWELVE_KEY = '26137bba624c4dcb9b5284ad1b234071';
 
   function cacheSet(key, obj) {
-    try { localStorage.setItem(key, JSON.stringify({ ts: Date.now(), data: obj })); }
-    catch {}
+    try { localStorage.setItem(key, JSON.stringify({ ts: Date.now(), data: obj })); } catch {}
   }
   function cacheGet(key) {
-    try { return JSON.parse(localStorage.getItem(key)); }
-    catch { return null; }
+    try { return JSON.parse(localStorage.getItem(key)); } catch { return null; }
   }
 
   function setStatus(el, type) {
     if (!el) return;
     el.classList.remove('badge-live', 'badge-cached', 'badge-error');
     el.classList.add('badge');
-    if (type === 'LIVE')       { el.textContent = 'LIVE'; el.classList.add('badge-live'); }
-    else if (type === 'CACHED'){ el.textContent = 'CACHED'; el.classList.add('badge-cached'); }
+    if      (type === 'LIVE')  { el.textContent = 'LIVE';  el.classList.add('badge-live'); }
+    else if (type === 'CACHED'){ el.textContent = 'CACHED';el.classList.add('badge-cached'); }
     else if (type === 'ERROR') { el.textContent = 'ERROR'; el.classList.add('badge-error'); }
     else                       { el.textContent = type; }
   }
@@ -246,8 +236,8 @@
     const [r1,g1,b1] = [(f(from)>>16)&255, (f(from)>>8)&255, f(from)&255];
     const [r2,g2,b2] = [(f(to)>>16)&255,   (f(to)>>8)&255,   f(to)&255];
     const rn = Math.round(r1 + (r2 - r1)*t);
-    const gn = Math.round(g1 + (g2 - g1)*t);
-    const bn = Math.round(b1 + (b2 - b1)*t);
+    const gn = Math.round(g1 + (r2 - g1)*t);
+    const bn = Math.round(b1 + (r2 - b1)*t);
     return `rgb(${rn},${gn},${bn})`;
   }
   function riskColor(score) {
@@ -273,20 +263,22 @@
         if (cache?.data) {
           renderer(cache.data);
           setStatus(document.getElementById(key + '-status'), 'CACHED');
-          document.getElementById(key + '-updated').textContent =
-            'Updated: ' + new Date(cache.ts).toLocaleTimeString() + ' (cached)';
+          const up = document.getElementById(key + '-updated');
+          if (up) up.textContent = 'Updated: ' + new Date(cache.ts).toLocaleTimeString() + ' (cached)';
         } else {
-          document.getElementById(key).textContent = '--';
+          const v = document.getElementById(key);
+          if (v) v.textContent = '--';
           setStatus(document.getElementById(key + '-status'), 'ERROR');
         }
       } else if (live) {
         renderer(live);
         setStatus(document.getElementById(key + '-status'), 'LIVE');
         cacheSet(key, live);
-        document.getElementById(key + '-updated').textContent =
-          'Updated: ' + new Date().toLocaleTimeString();
+        const up = document.getElementById(key + '-updated');
+        if (up) up.textContent = 'Updated: ' + new Date().toLocaleTimeString();
       } else {
-        document.getElementById(key).textContent = '--';
+        const v = document.getElementById(key);
+        if (v) v.textContent = '--';
       }
     }
 
@@ -322,8 +314,8 @@
       el.textContent = `${s >= 0 ? '▲' : '▼'} ${inv ? 'Inverted' : 'Normal'}`;
       el.className = 'change ' + (s >= 0 ? 'up' : 'down');
       setStatus(document.getElementById('yield-status'), inv ? 'INVERTED' : 'NORMAL');
-      document.getElementById('yield-updated').textContent =
-        'Updated: ' + new Date().toLocaleTimeString();
+      const up = document.getElementById('yield-updated');
+      if (up) up.textContent = 'Updated: ' + new Date().toLocaleTimeString();
     }
 
     // True Buffett
@@ -374,7 +366,7 @@
   }
 
   // ──────────────────────────────────────────────────────────────
-  // Risk Temperature (now supports pct OR changePercent/change)
+  // Risk Temperature — ONLY CHANGE IN THIS FILE
   // ──────────────────────────────────────────────────────────────
   function refreshRiskTemperature() {
     const scoreEl   = document.getElementById('risk-temp-score');
@@ -401,51 +393,54 @@
     // S&P 500 (SPY) daily % change → risk score (down = more risk)
     const spyPct = readPct('sp500');
     if (spyPct !== null) {
-      const s = clamp(50 - 12 * spyPct);
+      const s = clamp(50 - 12 * spyPct); // -1% => +12 risk; +1% => -12 risk
       parts.push({ label: `S&P ${spyPct >= 0 ? '+' : ''}${spyPct.toFixed(2)}%`, score: s, weight: 0.20 });
     }
 
-    // VIX index (prefer level; fallback to % change if that’s all we have)
+    // VIX index (prefer level; fallback to % change)
     const vixLevel = cacheGet('vix-index')?.data?.price;
     const vixChg   = readPct('vix-index');
     if (typeof vixLevel === 'number' && isFinite(vixLevel)) {
-      const s = clamp(20 + (vixLevel - 12) * 3);
-      parts.push({ label: `VIX ${vixLevel.toFixed(2)}`, score: s, weight: 0.25 });
+      // 12 -> ~20, 20 -> ~50, 30 -> ~88 (capped later), 40 -> ~125 (capped)
+      const s = clamp(20 + (vixLevel - 12) * 3.75);
+      parts.push({ label: `VIX ${vixLevel.toFixed(2)}`, score: s, weight: 0.35 });
     } else if (vixChg !== null) {
-      const s = clamp(50 + (vixChg * 4));
-      parts.push({ label: `VIX ${vixChg >= 0 ? '+' : ''}${Math.abs(vixChg).toFixed(2)}%`, score: s, weight: 0.15 });
+      const s = clamp(50 + (vixChg * 4)); // +1% VIX ≈ +4 risk pts
+      parts.push({ label: `VIX ${vixChg >= 0 ? '+' : ''}${Math.abs(vixChg).toFixed(2)}%`, score: s, weight: 0.35 });
     }
 
-    // Yield curve spread (10y-2y)
+    // Yield curve spread (10y-2y): inversion = riskier
     const yc = cacheGet('yield')?.data?.spread;
     if (typeof yc === 'number' && isFinite(yc)) {
       const s = yc < 0
-        ? clamp(70 + Math.min(30, Math.abs(yc) * 25))
-        : clamp(40 - Math.min(25, yc * 20));
-      parts.push({ label: `YC ${yc.toFixed(2)}%`, score: s, weight: 0.20 });
+        ? clamp(70 + Math.min(30, Math.abs(yc) * 25)) // deeper inversion -> higher risk
+        : clamp(40 - Math.min(25, yc * 20));          // steeper positive -> safer
+      parts.push({ label: `YC ${yc.toFixed(2)}%`, score: s, weight: 0.25 });
     }
 
-    // Buffett ratio
+    // Buffett ratio (% of GDP) — very low weight, long-term
     const buff = cacheGet('buffett')?.data?.ratio;
     if (typeof buff === 'number' && isFinite(buff)) {
+      // Soft scaling: 120% -> ~0, 160% -> 28, 200% -> 56, 240% -> 84, cap at 100
       const s = clamp((buff - 120) * 0.7);
-      parts.push({ label: `Buffett ${buff.toFixed(0)}%`, score: s, weight: 0.20 });
+      parts.push({ label: `Buffett ${buff.toFixed(0)}%`, score: s, weight: 0.05 });
     }
 
-    // Gold % change
+    // Gold % change (up = flight to safety → riskier)
     const goldPct = readPct('gold');
     if (goldPct !== null) {
-      const s = clamp(50 + goldPct * 10);
-      parts.push({ label: `Gold ${goldPct >= 0 ? '+' : ''}${goldPct.toFixed(2)}%`, score: s, weight: 0.075 });
+      const s = clamp(50 + goldPct * 8); // +1% gold ≈ +8 risk pts
+      parts.push({ label: `Gold ${goldPct >= 0 ? '+' : ''}${goldPct.toFixed(2)}%`, score: s, weight: 0.05 });
     }
 
-    // DXY % change
+    // DXY % change (strong USD = tighter conditions → riskier)
     const dxyPct = readPct('dxy');
     if (dxyPct !== null) {
-      const s = clamp(50 + dxyPct * 10);
-      parts.push({ label: `DXY ${dxyPct >= 0 ? '+' : ''}${dxyPct.toFixed(2)}%`, score: s, weight: 0.075 });
+      const s = clamp(50 + dxyPct * 8); // +1% DXY ≈ +8 risk pts
+      parts.push({ label: `DXY ${dxyPct >= 0 ? '+' : ''}${dxyPct.toFixed(2)}%`, score: s, weight: 0.10 });
     }
 
+    // nothing available yet
     if (!parts.length) {
       if (scoreEl)   scoreEl.textContent = '--%';
       if (statusEl)  statusEl.textContent = '--';
@@ -454,20 +449,21 @@
       return;
     }
 
+    // normalize weights in case some parts are missing
     const wsum  = parts.reduce((a, p) => a + p.weight, 0) || 1;
-    const score = Math.round(parts.reduce((a, p) => a + p.score * p.weight, 0) / wsum);
+    const raw   = parts.reduce((a, p) => a + p.score * p.weight, 0) / wsum;
+    const score = Math.round(clamp(raw, 0, 100));
 
+    // label bands
     let band = 'Calm';
     if (score >= 75) band = 'Alert';
     else if (score >= 50) band = 'Elevated';
     else if (score >= 25) band = 'Watch';
 
+    // write UI
     if (scoreEl)  scoreEl.textContent = `${score}%`;
-    if (statusEl) {
-      statusEl.textContent = band;
-      statusEl.style.color = riskColor(score);
-    }
-    if (needleEl)  needleEl.style.left = `${score}%`;
+    if (statusEl) { statusEl.textContent = band; statusEl.style.color = riskColor(score); }
+    if (needleEl) needleEl.style.left = `${score}%`;
     if (detailsEl) detailsEl.textContent = parts.map(p => p.label).join(' · ');
     if (updatedEl) updatedEl.textContent = 'Updated: ' + new Date().toLocaleTimeString();
   }
@@ -509,6 +505,7 @@
 
       setStatus(document.getElementById('vix-index-status'), 'LIVE');
 
+      // cache it
       cacheSet('vix-index', { price, change });
     } catch (e) {
       console.error('VIX Index error', e);
