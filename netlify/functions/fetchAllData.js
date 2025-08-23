@@ -76,7 +76,7 @@ export async function handler(event) {
 
   // ---------- Equities / ETFs (with fallback) ----------
   results.spy  = await tdWithFmpFallback('SPY');
-  // results.vixy = await tdWithFmpFallback('VIXY'); // (disabled)
+  results.vixy = await tdWithFmpFallback('VIXY');
   results.tsla = await tdWithFmpFallback('TSLA');
   results.lit  = await tdWithFmpFallback('LIT');
 
@@ -89,14 +89,7 @@ export async function handler(event) {
     results.yieldCurve = { error: err.message };
   }
 
-  // Estimated Buffett removed
-  // try {
-  //   const r = await fetch(`${base}/.netlify/functions/estimatedBuffett?bust=${bust}`);
-  //   if (!r.ok) throw new Error(`HTTP ${r.status}`);
-  //   results.estimatedBuffett = await r.json();
-  // } catch (err) {
-  //   results.estimatedBuffett = { error: err.message };
-  // }
+  // (Estimated Buffett removed earlier by you)
 
   try {
     const r = await fetch(`${base}/.netlify/functions/buffett?bust=${bust}`);
@@ -106,16 +99,18 @@ export async function handler(event) {
     results.buffett = { error: err.message };
   }
 
-  // ---------- Gold & USD index direct from FRED ----------
+  // ---------- Gold & USD index ----------
+  // Gold → use the dedicated lambda (proven working & handles FRED quirks)
   try {
-    // LBMA PM Gold price in USD/oz
-    results.gold = await fredLatestPair('GOLDPMGBD228NLBM');
+    const r = await fetch(`${base}/.netlify/functions/gold?bust=${bust}`);
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    results.gold = await r.json();
   } catch (err) {
     results.gold = { error: err.message };
   }
 
+  // DXY (broad USD index) from FRED (this has been reliable)
   try {
-    // Broad USD index
     results.dxy = await fredLatestPair('DTWEXBGS');
   } catch (err) {
     results.dxy = { error: err.message };
